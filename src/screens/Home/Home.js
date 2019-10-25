@@ -21,45 +21,44 @@ import BackgroundTimer from 'react-native-background-timer';
 import SystemSetting from 'react-native-system-setting';
 import MapView, {Marker, Polyline} from 'react-native-maps';
 import {getDistance} from 'geolib';
-
-import {styles} from './HomeStyles';
-
 import {PermissionsAndroid} from 'react-native';
 import Geolocation from '@react-native-community/geolocation';
+import {sendData} from '../../services/Device';
+import {calculateRoute} from '../../services/Navigation';
+import {Maneuvers} from '../../constants/Maneuvers';
+import {styles} from './HomeStyles';
 
-const key = 'QxKUhPa8OHWrKshETgGXGsjEzPZOTiGE';
+let looper;
 
 export class Home extends React.Component {
-  constructor() {
-    super();
-    this.state = {
-      from: {
-        text: '',
-        value: {},
-      },
-      to: {
-        text: '',
-        value: {},
-      },
-      fromSuggestions: [],
-      toSuggestions: [],
-      instructions: [],
-      steps: [],
-      isStreaming: false,
-      logs: [],
-      wifiState: true,
-      region: {
-        latitude: 37.78825,
-        longitude: -122.4324,
-        latitudeDelta: 0.0922,
-        longitudeDelta: 0.0421,
-      },
-      markers: [],
-      loading: false,
-      polyline: [],
-      currentInstruction: {},
-    };
-  }
+  state = {
+    from: {
+      text: '',
+      value: {},
+    },
+    to: {
+      text: '',
+      value: {},
+    },
+    fromSuggestions: [],
+    toSuggestions: [],
+    instructions: [],
+    logs: [],
+    wifiState: true,
+    region: {
+      latitude: 37.78825,
+      longitude: -122.4324,
+      latitudeDelta: 0.0922,
+      longitudeDelta: 0.0421,
+    },
+    markers: [],
+    loading: false,
+    polyline: [],
+    currentInstruction: {},
+    route: [],
+    isNavigating: false,
+    mock: true,
+  };
 
   checkWifi = () => {
     SystemSetting.isWifiEnabled().then(enable => {
@@ -149,7 +148,7 @@ export class Home extends React.Component {
         value,
       },
     });
-    setTimeout(this.seachRoute, 0);
+    setTimeout(this.calculateRoute, 0);
   };
 
   returnToPlace = (text, value) => {
@@ -159,7 +158,7 @@ export class Home extends React.Component {
         value,
       },
     });
-    setTimeout(this.seachRoute, 0);
+    setTimeout(this.calculateRoute, 0);
   };
 
   openPlaceModal = (place, action) => {
@@ -179,22 +178,18 @@ export class Home extends React.Component {
       });
     console.log('TCL: setMarkers -> points', points);
     this.setState({markers: points});
-    const polyline = data.legs[0].points;
+    const polyline = data.guidance.instructions.map(i => i.point);
+    console.log('TCL: Home -> polyline', polyline);
     console.log('TCL: Home -> setMarkers -> polyline', polyline);
     this.setState({polyline});
   };
 
-  seachRoute = () => {
+  calculateRoute = async () => {
     const {from, to} = this.state;
-    console.log('TCL: Home -> seachRoute ->  from, to', from, to);
     const coords = {
       lat: this.state.latitude,
       lon: this.state.longitude,
     };
-    console.log(
-      'TCL: Home -> seachRoute -> from.value === {}',
-      from.value === {},
-    );
     if (!Object.entries(from.value).length) {
       from.value = coords;
     }
@@ -202,37 +197,109 @@ export class Home extends React.Component {
       to.value = coords;
     }
     this.setState({loading: true});
-    const url = `https://api.tomtom.com/routing/1/calculateRoute/${
-      from.value.lat
-    },${from.value.lon}:${to.value.lat},${
-      to.value.lon
-    }/json?instructionsType=text&avoid=unpavedRoads&key=${key}`;
-    fetch(url)
-      .then(res => res.json())
-      .then(res => {
-        console.log('TCL: Home -> seachRoute -> res', res);
-        const instructions = res.routes[0].guidance.instructions;
-        this.route = res.routes[0];
-        this.setState({instructions, steps: instructions, loading: false});
-        this.setMarkers(res.routes[0]);
-      })
-      .catch(err => {
-        Alert.alert('Oops!', 'Something went wrong. Please try again later.');
-        console.log('TCL: Home -> seachRoute -> err', err);
-        this.setState({loading: false});
-      });
+    const result = await calculateRoute(from.value, to.value);
+    if (!result.status) {
+      Alert.alert('Oops', 'Something went wrong');
+      this.setState({loading: false});
+      return;
+    }
+    const route = result.route;
+    this.setState({route, loading: false});
+    this.drawRoute();
+  };
+
+  drawRoute = () => {
+    const {route} = this.state;
+    const polyline = route.map(i => i.point);
+    this.addMarker(route[0].point, 'Source');
+    this.addMarker(route[route.length - 1].point, 'Destination');
+    this.setState({polyline});
+  };
+
+  addMarker = (latlng, title) => {
+    const {markers} = this.state;
+    markers.push({latlng, title});
+    this.setState(markers);
+  };
+
+  startNavigation = () => {
+    this.setState({isNavigating: !this.state.isNavigating});
+    looper = BackgroundTimer.setInterval(() => {
+      this.calculateNavigation();
+    }, 2000);
+  };
+
+  stopNavigation = () => {
+    this.setState({isNavigating: false});
+    BackgroundTimer.clearInterval(looper);
+  };
+
+  getMockData = () => {
+    const maneuvers = Maneuvers;
+    const messages = [
+      'Leave from Ramganesh Gadkari Road',
+      'Turn right onto Kasaba Peth in 90 mts',
+      'Turn left onto Chhatrapati Shivaji Maharaj Road/NH4',
+    ];
+    const distances = [
+      '20 m',
+      '30 m',
+      '40 m',
+      '50 m',
+      '60 m',
+      '70 m',
+      '80 m',
+      '90 m',
+      '1.2 km',
+      '1.5 km',
+      '1.4 km',
+      '2.0 km',
+    ];
+    const angles = [45, 90, -45, -90];
+    const getRandom = array => {
+      console.log('TCL: Home -> getMockData -> array', array);
+      const idx = Math.floor(Math.random() * (array.length - 1));
+      return array[idx];
+    };
+
+    // Mock
+    const message = {
+      maneuver: getRandom(maneuvers).value,
+      display: getRandom(maneuvers).display,
+      message: getRandom(messages),
+      distance: getRandom(distances),
+      turnAngle: getRandom(angles),
+    };
+    return message;
+  };
+
+  calculateNavigation = async () => {
+    const {mock} = this.state;
+    // fetch current location
+    // locate the position on the polyline
+    // create the next message
+    let messageObj;
+    if (mock) {
+      messageObj = this.getMockData();
+    }
+    this.setState({currentInstruction: messageObj});
+    const result = await sendData(messageObj);
+    this.addLog(result);
+    console.log('TCL: Home -> calculateNavigation -> result', result);
+    // send message
   };
 
   addLog = str => {
-    console.log('TCL: addLog -> str', str);
-    const logs = this.state.logs;
-    console.log('TCL: addLog -> logs', logs);
-    this.setState({
-      logs: [...this.state.logs, {msg: str}],
-    });
+    return true;
+    // console.log('TCL: addLog -> str', str);
+    // const logs = this.state.logs;
+    // console.log('TCL: addLog -> logs', logs);
+    // this.setState({
+    //   logs: [...this.state.logs, {msg: str.message}],
+    // });
   };
 
-  calculateNavigation = () => {
+  calculateNavigation2 = () => {
     // fetch the current position
     const current = {
       latitude: this.state.latitude,
@@ -252,13 +319,6 @@ export class Home extends React.Component {
 
     const data = this.state.instructions[1];
     console.log('TCL: Home -> calculateNavigation -> data', data);
-
-    // const message = {
-    //     "maneuver": data.maneuver,
-    //     "message": data.message,
-    //     "distance": distance,
-    //     "turnAngle": data.turnAngleInDecimalDegrees,
-    // }
 
     const maneuvers = [
       'ARRIVE',
@@ -301,14 +361,10 @@ export class Home extends React.Component {
       'Turn left onto Chhatrapati Shivaji Maharaj Road/NH4',
     ];
     const distances = [20, 30, 40, 50, 60, 70, 80, 90];
-    // let i;
-    // for (i = 0; i <= 100; i + 10) {
-    //     distances.push(i);
-    // }
-    // console.log('TCL: Home -> calculateNavigation -> distances', distances);
     const angles = [45, 90, -45, -90];
 
     const getRandom = array => {
+      console.log('TCL: Home -> array', array);
       const idx = Math.floor(Math.random() * (array.length - 1));
       return array[idx];
     };
@@ -324,79 +380,6 @@ export class Home extends React.Component {
 
     this.setState({currentInstruction: message});
     return message;
-  };
-
-  sendMockData = () => {
-    // const steps = [
-    //     {
-    //         "maneuver": "DEPART",
-    //         "message": "Leave from Ramganesh Gadkari Road"
-    //     },
-    //     {
-    //         "maneuver": "TURN_RIGHT",
-    //         "message": "Turn right onto Kasaba Peth in 100 mts"
-    //     },
-    //     {
-    //         "maneuver": "TURN_RIGHT",
-    //         "message": "Turn right onto Kasaba Peth in 90 mts"
-    //     },
-    //     {
-    //         "maneuver": "TURN_RIGHT",
-    //         "message": "Turn right onto Kasaba Peth in 80 mts"
-    //     },
-    //     {
-    //         "maneuver": "TURN_LEFT",
-    //         "message": "Turn left onto Chhatrapati Shivaji Maharaj Road/NH4"
-    //     },
-    //     {
-    //         "maneuver": "ARRIVE_RIGHT",
-    //         "message": "You have arrived. Your destination is on the right"
-    //     }
-    // ];
-    const intervalId = BackgroundTimer.setInterval(() => {
-      const {isStreaming} = this.state;
-      this.fetchCurrentLocation();
-      const message = this.calculateNavigation();
-      if (!isStreaming) {
-        console.log('Will stop sending data to server');
-        BackgroundTimer.clearInterval(intervalId);
-      }
-      console.log('TCL: sending this....', message);
-      // fetch('http://192.168.43.163:3000/send', {
-      fetch('http://192.168.4.1/send', {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(message),
-      })
-        .then(res => res.json())
-        .then(res => {
-          console.log('TCL: Home -> sendMockData -> res', res);
-          const body = res;
-          console.log('TCL: intervalId -> body', body);
-          this.addLog(JSON.stringify(body, null, 2));
-        })
-        .catch(err => {
-          console.log('TCL: Home -> sendMockData -> err', err);
-          const toString = err.toString();
-          console.log('TCL: intervalId -> toString', toString);
-          this.addLog(toString);
-        });
-    }, 2000);
-  };
-
-  startNavigation = async () => {
-    // Alert.alert('Started', 'Mockdata is now being sent to the server');
-    await this.setState({isStreaming: true});
-    this.sendMockData();
-  };
-
-  stopNavigation = async () => {
-    this.setState({isStreaming: false});
-    // Alert.alert('Stopped', 'Stopped sending data to server');
-    return;
   };
 
   renderLogs = lols => {
@@ -429,7 +412,7 @@ export class Home extends React.Component {
             </ListItem>
           );
         })}
-        {this.state.isStreaming ? (
+        {this.state.isNavigating ? (
           <Button full large danger onPress={this.stopNavigation}>
             <Text>Stop</Text>
           </Button>
@@ -459,7 +442,7 @@ export class Home extends React.Component {
         style={styles.map}
         initialRegion={this.state.region}
         region={this.state.region}
-        followsUserLocation={this.state.isStreaming}>
+        followsUserLocation={this.state.isNavigating}>
         <Polyline coordinates={this.state.polyline} />
         {this.state.markers.map((marker, idx) => (
           <Marker
@@ -532,17 +515,14 @@ export class Home extends React.Component {
             </Right>
           </ListItem>
         </List>
-        {/* <Button block style={styles.searchButton} onPress={this.seachRoute}>
-                    <Text>Search</Text>
-                </Button> */}
       </Content>
     );
   }
 
-  renderTransmittedDate = () => {
+  renderTransmittedData = data => {
     return (
       <Content>
-        <Text>{JSON.stringify(this.state.currentInstruction, null, 2)}</Text>
+        <Text>{JSON.stringify(data, null, 2)}</Text>
       </Content>
     );
   };
@@ -550,11 +530,6 @@ export class Home extends React.Component {
   render() {
     return (
       <Container>
-        {/* <Header>
-                    <Body>
-                        <Title>Navi</Title>
-                    </Body>
-                </Header> */}
         <Content>
           {this.renderSearch()}
           <Tabs style={{elevation: -1}}>
@@ -570,10 +545,10 @@ export class Home extends React.Component {
               heading={
                 <TabHeading>
                   <Spinner size="small" animating={this.state.loading} />
-                  <Text>Navigation</Text>
+                  <Text>Navigate</Text>
                 </TabHeading>
               }>
-              {this.renderInstructions(this.state.instructions)}
+              {this.renderInstructions(this.state.route)}
             </Tab>
             <Tab
               heading={
@@ -581,15 +556,7 @@ export class Home extends React.Component {
                   <Text>Data</Text>
                 </TabHeading>
               }>
-              {this.renderTransmittedDate(this.state.currentInstruction)}
-            </Tab>
-            <Tab
-              heading={
-                <TabHeading>
-                  <Text>Logs</Text>
-                </TabHeading>
-              }>
-              {this.renderLogs(this.state.logs)}
+              {this.renderTransmittedData(this.state.currentInstruction)}
             </Tab>
           </Tabs>
         </Content>
