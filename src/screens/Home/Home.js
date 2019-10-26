@@ -162,6 +162,7 @@ export class Home extends React.Component {
   };
 
   openPlaceModal = (place, action) => {
+    this.wifiToggled(false);
     this.props.navigation.navigate('PlaceModal', {place, action});
   };
 
@@ -198,6 +199,7 @@ export class Home extends React.Component {
     }
     this.setState({loading: true});
     const result = await calculateRoute(from.value, to.value);
+    this.wifiToggled(true);
     if (!result.status) {
       Alert.alert('Oops', 'Something went wrong');
       this.setState({loading: false});
