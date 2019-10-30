@@ -5,13 +5,11 @@ import {
   Content,
   Button,
   Text,
-  Body,
   List,
   ListItem,
   Right,
   Left,
   Icon,
-  Switch,
   Tabs,
   Tab,
   TabHeading,
@@ -20,13 +18,12 @@ import {
 import BackgroundTimer from 'react-native-background-timer';
 import SystemSetting from 'react-native-system-setting';
 import MapView, {Marker, Polyline} from 'react-native-maps';
-import {getDistance} from 'geolib';
-import {PermissionsAndroid} from 'react-native';
 import Geolocation from '@react-native-community/geolocation';
 import {sendData} from '../../services/Device';
 import {calculateRoute} from '../../services/Navigation';
 import {Maneuvers} from '../../constants/Maneuvers';
 import {styles} from './HomeStyles';
+import {requestLocationPermission} from '../../services/Permission';
 
 let looper;
 
@@ -60,21 +57,78 @@ export class Home extends React.Component {
     mock: true,
   };
 
+  async componentDidMount() {
+    this.checkWifi();
+    const access = await requestLocationPermission();
+    if (access) {
+      await this.fetchCurrentLocation();
+    }
+  }
+
   checkWifi = () => {
     SystemSetting.isWifiEnabled().then(enable => {
       this.setState({wifiState: enable});
     });
   };
 
-  fetchCurrentLocation = async () => {
-    const currentLocation = {};
-    console.log(
-      'TCL: fetchCurrentLocation -> currentLocation',
-      currentLocation,
-    );
-    Geolocation.getCurrentPosition(position => {
-      console.log('TCL: fetchCurrentLocation -> position', position);
+  toggleWifi = wifiState => {
+    this.setState({
+      wifiState,
+    });
 
+    SystemSetting.switchWifiSilence(() => {
+      this.checkWifi();
+    });
+  };
+
+  openPlaceModal = (place, action) => {
+    this.toggleWifi(false);
+    this.props.navigation.navigate('PlaceModal', {place, action});
+  };
+
+  returnFromPlace = (text, value) => {
+    this.setState({
+      from: {
+        text,
+        value,
+      },
+    });
+    setTimeout(this.calculateRoute, 0);
+  };
+
+  returnToPlace = (text, value) => {
+    this.setState({
+      to: {
+        text,
+        value,
+      },
+    });
+    setTimeout(this.calculateRoute, 0);
+  };
+
+  setMarkers = data => {
+    const points = data.legs[0].points
+      .filter((p, idx, array) => idx === 0 || idx === array.length - 1)
+      .map((p, idx) => {
+        const obj = {
+          latlng: p,
+          title: idx === 0 ? 'Source' : 'Destination',
+        };
+        return obj;
+      });
+    this.setState({markers: points});
+    const polyline = data.guidance.instructions.map(i => i.point);
+    this.setState({polyline});
+  };
+
+  addMarker = (latlng, title) => {
+    const {markers} = this.state;
+    markers.push({latlng, title});
+    this.setState(markers);
+  };
+
+  fetchCurrentLocation = async () => {
+    Geolocation.getCurrentPosition(position => {
       // TODO: Add another step to rectify sensor data
 
       this.setState({
@@ -101,88 +155,7 @@ export class Home extends React.Component {
         markers[markers.length - 1] = obj;
         this.setState({markers});
       }
-      console.log(
-        'TCL: Home -> fetchCurrentLocation -> this.state.markers',
-        this.state.markers,
-      );
     });
-  };
-
-  componentDidMount() {
-    this.requestLocationPermission()
-      .then(async res => {
-        await this.fetchCurrentLocation();
-      })
-      .catch(err => {
-        console.log('TCL: componentDidMount -> err', err);
-      });
-    this.checkWifi();
-  }
-
-  requestLocationPermission = async () => {
-    try {
-      const granted = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-        {
-          title: 'Permission for location',
-          message: 'Need some permission for the app to work.',
-          buttonNeutral: 'Ask Me Later',
-          buttonNegative: 'Cancel',
-          buttonPositive: 'OK',
-        },
-      );
-      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-        console.log('You can use the Location');
-      } else {
-        console.log('Location permission denied');
-      }
-    } catch (err) {
-      console.warn(err);
-    }
-  };
-
-  returnFromPlace = (text, value) => {
-    this.setState({
-      from: {
-        text,
-        value,
-      },
-    });
-    setTimeout(this.calculateRoute, 0);
-  };
-
-  returnToPlace = (text, value) => {
-    this.setState({
-      to: {
-        text,
-        value,
-      },
-    });
-    setTimeout(this.calculateRoute, 0);
-  };
-
-  openPlaceModal = (place, action) => {
-    this.wifiToggled(false);
-    this.props.navigation.navigate('PlaceModal', {place, action});
-  };
-
-  setMarkers = data => {
-    console.log('TCL: Home -> setMarkers -> data', data);
-    const points = data.legs[0].points
-      .filter((p, idx, array) => idx === 0 || idx === array.length - 1)
-      .map((p, idx) => {
-        const obj = {
-          latlng: p,
-          title: idx === 0 ? 'Source' : 'Destination',
-        };
-        return obj;
-      });
-    console.log('TCL: setMarkers -> points', points);
-    this.setState({markers: points});
-    const polyline = data.guidance.instructions.map(i => i.point);
-    console.log('TCL: Home -> polyline', polyline);
-    console.log('TCL: Home -> setMarkers -> polyline', polyline);
-    this.setState({polyline});
   };
 
   calculateRoute = async () => {
@@ -199,7 +172,7 @@ export class Home extends React.Component {
     }
     this.setState({loading: true});
     const result = await calculateRoute(from.value, to.value);
-    this.wifiToggled(true);
+    this.toggleWifi(true);
     if (!result.status) {
       Alert.alert('Oops', 'Something went wrong');
       this.setState({loading: false});
@@ -216,12 +189,6 @@ export class Home extends React.Component {
     this.addMarker(route[0].point, 'Source');
     this.addMarker(route[route.length - 1].point, 'Destination');
     this.setState({polyline});
-  };
-
-  addMarker = (latlng, title) => {
-    const {markers} = this.state;
-    markers.push({latlng, title});
-    this.setState(markers);
   };
 
   startNavigation = () => {
@@ -259,7 +226,6 @@ export class Home extends React.Component {
     ];
     const angles = [45, 90, -45, -90];
     const getRandom = array => {
-      console.log('TCL: Home -> getMockData -> array', array);
       const idx = Math.floor(Math.random() * (array.length - 1));
       return array[idx];
     };
@@ -283,122 +249,12 @@ export class Home extends React.Component {
     let messageObj;
     if (mock) {
       messageObj = this.getMockData();
+    } else {
+      messageObj = this.getMockData();
     }
     this.setState({currentInstruction: messageObj});
     const result = await sendData(messageObj);
-    this.addLog(result);
     console.log('TCL: Home -> calculateNavigation -> result', result);
-    // send message
-  };
-
-  addLog = str => {
-    return true;
-    // console.log('TCL: addLog -> str', str);
-    // const logs = this.state.logs;
-    // console.log('TCL: addLog -> logs', logs);
-    // this.setState({
-    //   logs: [...this.state.logs, {msg: str.message}],
-    // });
-  };
-
-  calculateNavigation2 = () => {
-    // fetch the current position
-    const current = {
-      latitude: this.state.latitude,
-      longitude: this.state.longitude,
-    };
-
-    // check which is the next stop
-
-    const route = this.route;
-    console.log('TCL: Home -> calculateNavigation -> route', route);
-
-    const nextStop = route.legs[0].points[1];
-
-    // check the distance
-    const distance = getDistance(current, nextStop);
-    console.log('TCL: Home -> calculateNavigation -> distance', distance);
-
-    const data = this.state.instructions[1];
-    console.log('TCL: Home -> calculateNavigation -> data', data);
-
-    const maneuvers = [
-      'ARRIVE',
-      'ARRIVE_LEFT',
-      'ARRIVE_RIGHT',
-      'DEPART',
-      'STRAIGHT',
-      'KEEP_RIGHT',
-      'BEAR_RIGHT',
-      'TURN_RIGHT',
-      'SHARP_RIGHT',
-      'KEEP_LEFT',
-      'BEAR_LEFT',
-      'TURN_LEFT',
-      'SHARP_LEFT',
-      'MAKE_UTURN',
-      'ENTER_MOTORWAY',
-      'ENTER_FREEWAY',
-      'ENTER_HIGHWAY',
-      'TAKE_EXIT',
-      'MOTORWAY_EXIT_LEFT',
-      'MOTORWAY_EXIT_RIGHT',
-      'TAKE_FERRY',
-      'ROUNDABOUT_CROSS',
-      'ROUNDABOUT_RIGHT',
-      'ROUNDABOUT_LEFT',
-      'ROUNDABOUT_BACK',
-      'TRY_MAKE_UTURN',
-      'FOLLOW',
-      'SWITCH_PARALLEL_ROAD',
-      'SWITCH_MAIN_ROAD',
-      'ENTRANCE_RAMP',
-      'WAYPOINT_LEFT',
-      'WAYPOINT_RIGHT',
-      'WAYPOINT_REACHED',
-    ];
-    const messages = [
-      'Leave from Ramganesh Gadkari Road',
-      'Turn right onto Kasaba Peth in 90 mts',
-      'Turn left onto Chhatrapati Shivaji Maharaj Road/NH4',
-    ];
-    const distances = [20, 30, 40, 50, 60, 70, 80, 90];
-    const angles = [45, 90, -45, -90];
-
-    const getRandom = array => {
-      console.log('TCL: Home -> array', array);
-      const idx = Math.floor(Math.random() * (array.length - 1));
-      return array[idx];
-    };
-
-    // Mock
-    const message = {
-      maneuver: getRandom(maneuvers),
-      message: getRandom(messages),
-      distance: getRandom(distances),
-      turnAngle: getRandom(angles),
-    };
-    console.log('TCL: Home -> calculateNavigation -> message', message);
-
-    this.setState({currentInstruction: message});
-    return message;
-  };
-
-  renderLogs = lols => {
-    return lols.length ? (
-      <List>
-        <ListItem bordered itemDivider>
-          <Text>Logs</Text>
-        </ListItem>
-        {lols.map((log, inx) => {
-          return (
-            <ListItem key={inx}>
-              <Text>{log.msg}</Text>
-            </ListItem>
-          );
-        })}
-      </List>
-    ) : null;
   };
 
   renderInstructions = instructions => {
@@ -427,17 +283,6 @@ export class Home extends React.Component {
     ) : null;
   };
 
-  wifiToggled = wifiState => {
-    console.log('TCL: wifiToggled -> wifiState', wifiState);
-    this.setState({
-      wifiState,
-    });
-
-    SystemSetting.switchWifiSilence(() => {
-      this.checkWifi();
-    });
-  };
-
   renderMap() {
     return (
       <MapView
@@ -456,29 +301,6 @@ export class Home extends React.Component {
           />
         ))}
       </MapView>
-    );
-  }
-
-  renderSettings() {
-    return (
-      <List>
-        <ListItem icon>
-          <Left>
-            <Icon active name="wifi" />
-            {/* <Button> */}
-            {/* </Button> */}
-          </Left>
-          <Body>
-            <Text>Wifi</Text>
-          </Body>
-          <Right>
-            <Switch
-              value={this.state.wifiState}
-              onValueChange={this.wifiToggled}
-            />
-          </Right>
-        </ListItem>
-      </List>
     );
   }
 
@@ -534,7 +356,7 @@ export class Home extends React.Component {
       <Container>
         <Content>
           {this.renderSearch()}
-          <Tabs style={{elevation: -1}}>
+          <Tabs style={styles.tabs}>
             <Tab
               heading={
                 <TabHeading>
