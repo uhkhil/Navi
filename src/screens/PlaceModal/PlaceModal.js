@@ -45,7 +45,6 @@ export class PlaceModal extends React.Component {
       text: '',
       value: {},
     });
-    console.log('TCL: PlaceModal -> componentDidMount -> place', place);
     this.setState({place});
     if (place && place.text) {
       this.placeTyped(place.text);
@@ -53,7 +52,6 @@ export class PlaceModal extends React.Component {
   }
 
   selectPlace = (text, value) => {
-    console.log('TCL: PlaceModal -> selectPlace -> text, value', text, value);
     this.props.navigation.state.params.action(text, value);
     this.props.navigation.pop();
   };
@@ -62,7 +60,6 @@ export class PlaceModal extends React.Component {
     this.setState({loading: true});
     const results = await this.searchLocation(searchString);
     this.setState({loading: false});
-    console.log('TCL: Home -> placeTyped -> results', results);
     this.setState({
       results: results ? results : [],
     });
@@ -74,11 +71,9 @@ export class PlaceModal extends React.Component {
       fetch(url)
         .then(res => res.json())
         .then(res => {
-          console.log('TCL: Home -> searchLocation -> res', res);
           resolve(res.results);
         })
         .catch(err => {
-          console.log('TCL: Home -> searchLocation -> err', err);
           reject([]);
         });
     });

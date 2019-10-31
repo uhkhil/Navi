@@ -14,6 +14,8 @@ import {
   Tab,
   TabHeading,
   Spinner,
+  CheckBox,
+  Body,
 } from 'native-base';
 import BackgroundTimer from 'react-native-background-timer';
 import SystemSetting from 'react-native-system-setting';
@@ -288,10 +290,6 @@ export class Home extends React.Component {
     } else {
       // find the respective instruction
       const currentInstruction = route.find(r => r.point === nearestLine.to);
-      console.log(
-        'TCL: Home -> calculateNavigation -> currentInstruction',
-        currentInstruction,
-      );
       messageObj = createNavigationData(currentInstruction, alongLineDistance);
     }
     this.setState({currentInstruction: messageObj});
@@ -411,10 +409,38 @@ export class Home extends React.Component {
   }
 
   renderTransmittedData = data => {
+    return <Text>{JSON.stringify(data, null, 2)}</Text>;
+  };
+
+  renderSettings = () => {
     return (
-      <Content>
-        <Text>{JSON.stringify(data, null, 2)}</Text>
-      </Content>
+      <List>
+        <ListItem header>
+          <Body>
+            <Text>Settings</Text>
+          </Body>
+        </ListItem>
+        <ListItem>
+          <CheckBox
+            checked={this.state.mock}
+            onPress={() => this.setState({mock: !this.state.mock})}
+          />
+          <Body>
+            <Text>Mock data</Text>
+          </Body>
+        </ListItem>
+        <ListItem>
+          <CheckBox
+            checked={this.state.mockLocation}
+            onPress={() =>
+              this.setState({mockLocation: !this.state.mockLocation})
+            }
+          />
+          <Body>
+            <Text>Draggable current location</Text>
+          </Body>
+        </ListItem>
+      </List>
     );
   };
 
@@ -447,7 +473,10 @@ export class Home extends React.Component {
                   <Text>Data</Text>
                 </TabHeading>
               }>
-              {this.renderTransmittedData(this.state.currentInstruction)}
+              <Content>
+                {this.renderTransmittedData(this.state.currentInstruction)}
+                {this.renderSettings()}
+              </Content>
             </Tab>
           </Tabs>
         </Content>
