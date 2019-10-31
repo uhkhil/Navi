@@ -19,11 +19,27 @@ import BackgroundTimer from 'react-native-background-timer';
 import SystemSetting from 'react-native-system-setting';
 import MapView, {Marker, Polyline} from 'react-native-maps';
 import Geolocation from '@react-native-community/geolocation';
+
+import {
+  getDistanceFromLine,
+  findNearest,
+  orderByDistance,
+  getDistance,
+  computeDestinationPoint,
+  getGreatCircleBearing,
+} from 'geolib';
 import {sendData} from '../../services/Device';
-import {calculateRoute} from '../../services/Navigation';
+import {calculateRoute, createInstructionObj} from '../../services/Navigation';
 import {Maneuvers} from '../../constants/Maneuvers';
-import {styles} from './HomeStyles';
 import {requestLocationPermission} from '../../services/Permission';
+import {styles} from './HomeStyles';
+
+const getLocation = () =>
+  new Promise((resolve, reject) => {
+    Geolocation.getCurrentPosition(position => {
+      resolve(position);
+    });
+  });
 
 let looper;
 
@@ -43,8 +59,8 @@ export class Home extends React.Component {
     logs: [],
     wifiState: true,
     region: {
-      latitude: 37.78825,
-      longitude: -122.4324,
+      latitude: 18.5553581313748,
+      longitude: 73.87878940594761,
       latitudeDelta: 0.0922,
       longitudeDelta: 0.0421,
     },
@@ -54,14 +70,17 @@ export class Home extends React.Component {
     currentInstruction: {},
     route: [],
     isNavigating: false,
-    mock: true,
+    mock: false,
+    expectedPoint: null,
+    currentPoint: null,
+    mockLocation: false,
   };
 
   async componentDidMount() {
     this.checkWifi();
     const access = await requestLocationPermission();
     if (access) {
-      await this.fetchCurrentLocation();
+      await this.initialFetchLocation();
     }
   }
 
@@ -127,7 +146,7 @@ export class Home extends React.Component {
     this.setState(markers);
   };
 
-  fetchCurrentLocation = async () => {
+  initialFetchLocation = async () => {
     Geolocation.getCurrentPosition(position => {
       // TODO: Add another step to rectify sensor data
 
@@ -135,6 +154,7 @@ export class Home extends React.Component {
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
         error: null,
+        currentPoint: position.coords,
       });
       if (!this.state.isStreaming) {
         this.setState({
@@ -242,19 +262,84 @@ export class Home extends React.Component {
   };
 
   calculateNavigation = async () => {
-    const {mock} = this.state;
+    const {mock, route, mockLocation} = this.state;
+    const points = route.map(r => r.point);
+
     // fetch current location
+    let current;
+    if (mockLocation) {
+      current = this.state.currentLocation;
+    } else {
+      const position = await getLocation();
+      current = position.coords;
+      this.setState({currentPoint: current});
+    }
+
     // locate the position on the polyline
-    // create the next message
+    // find the closest line
+
+    const nearestPoints = orderByDistance(current, points).slice(0, 5);
+
+    const nearestLines = [];
+    nearestPoints.forEach(point => {
+      const pointIndex = points.indexOf(point);
+      if (pointIndex !== 0) {
+        const prev = {
+          from: points[pointIndex - 1],
+          to: points[pointIndex],
+        };
+        nearestLines.push(prev);
+      }
+      if (pointIndex !== points.length - 1) {
+        const next = {
+          from: points[pointIndex],
+          to: points[pointIndex + 1],
+        };
+        nearestLines.push(next);
+      }
+    });
+
+    const nearestLine = nearestLines
+      .map(line => {
+        line.distance = getDistanceFromLine(current, line.from, line.to);
+        return line;
+      })
+      .filter(line => typeof line.distance === 'number')
+      .sort((a, b) => a.distance > b.distance)[0];
+
+    this.setState({nextPoint: nearestLine.to});
+
+    // calculate sides of the hypotenuse triangle
+    const hypotenuse = getDistance(current, nearestLine.to);
+    const alongLineDistance = Math.sqrt(
+      Math.pow(hypotenuse, 2) - Math.pow(nearestLine.distance, 2),
+    );
+
+    // find the point along the polyline
+    const bearing = getGreatCircleBearing(nearestLine.from, nearestLine.to);
+
+    const expectedPoint = computeDestinationPoint(
+      nearestLine.to,
+      -alongLineDistance,
+      bearing,
+    );
+    this.setState({expectedPoint});
+
+    // create the next message`
     let messageObj;
     if (mock) {
       messageObj = this.getMockData();
     } else {
-      messageObj = this.getMockData();
+      // find the respective instruction
+      const currentInstruction = route.find(r => r.point === nearestLine.to);
+      console.log(
+        'TCL: Home -> calculateNavigation -> currentInstruction',
+        currentInstruction,
+      );
+      messageObj = createInstructionObj(currentInstruction, alongLineDistance);
     }
     this.setState({currentInstruction: messageObj});
     const result = await sendData(messageObj);
-    console.log('TCL: Home -> calculateNavigation -> result', result);
   };
 
   renderInstructions = instructions => {
@@ -283,23 +368,54 @@ export class Home extends React.Component {
     ) : null;
   };
 
+  onDrag = event => {
+    const coord = event.nativeEvent.coordinate;
+    this.setState({currentPoint: coord});
+  };
+
   renderMap() {
     return (
       <MapView
         style={styles.map}
         initialRegion={this.state.region}
-        region={this.state.region}
-        followsUserLocation={this.state.isNavigating}>
+        // region={this.state.region}
+        // followsUserLocation={this.state.isNavigating}
+        on>
         <Polyline coordinates={this.state.polyline} />
         {this.state.markers.map((marker, idx) => (
           <Marker
             key={idx}
+            draggable={marker.type === 'current'}
+            onDrag={this.onDrag}
             coordinate={marker.latlng}
             title={marker.title}
             description={marker.description}
             pinColor={marker.type === 'current' ? 'lightblue' : 'red'}
           />
         ))}
+        {this.state.expectedPoint ? (
+          <Marker
+            coordinate={this.state.expectedPoint}
+            title="Expected"
+            pinColor="darkblue"
+          />
+        ) : null}
+        {this.state.currentPoint ? (
+          <Marker
+            coordinate={this.state.currentPoint}
+            title="Actual"
+            draggable={this.state.mockLocation}
+            onDrag={this.onDrag}
+            pinColor="lightblue"
+          />
+        ) : null}
+        {this.state.nextPoint ? (
+          <Marker
+            coordinate={this.state.nextPoint}
+            title="Next stop"
+            pinColor="green"
+          />
+        ) : null}
       </MapView>
     );
   }
