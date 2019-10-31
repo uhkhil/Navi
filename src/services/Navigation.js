@@ -24,3 +24,14 @@ export const calculateRoute = async (from, to) => {
     };
   }
 };
+
+export const createInstructionObj = (instruction, distance) => {
+  const messageObj = {
+    maneuver: instruction.maneuver,
+    display: instruction.maneuver,
+    message: instruction.message,
+    distance: distance + ' m',
+    turnAngle: instruction.turnAngleInDecimalDegrees,
+  };
+  return messageObj;
+};
