@@ -22,15 +22,17 @@ import Geolocation from '@react-native-community/geolocation';
 
 import {
   getDistanceFromLine,
-  findNearest,
   orderByDistance,
   getDistance,
   computeDestinationPoint,
   getGreatCircleBearing,
 } from 'geolib';
 import {sendData} from '../../services/Device';
-import {calculateRoute, createInstructionObj} from '../../services/Navigation';
-import {Maneuvers} from '../../constants/Maneuvers';
+import {
+  calculateRoute,
+  createNavigationData,
+  createMockNavigationData,
+} from '../../services/Navigation';
 import {requestLocationPermission} from '../../services/Permission';
 import {styles} from './HomeStyles';
 
@@ -146,36 +148,28 @@ export class Home extends React.Component {
     this.setState(markers);
   };
 
-  initialFetchLocation = async () => {
-    Geolocation.getCurrentPosition(position => {
-      // TODO: Add another step to rectify sensor data
+  onDrag = event => {
+    const coord = event.nativeEvent.coordinate;
+    this.setState({currentPoint: coord});
+  };
 
-      this.setState({
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        error: null,
-        currentPoint: position.coords,
-      });
-      if (!this.state.isStreaming) {
-        this.setState({
-          region: {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            latitudeDelta: 0.0922,
-            longitudeDelta: 0.0421,
-          },
-        });
-      }
-      const obj = {
-        latlng: position.coords,
-        type: 'current',
-      };
-      if (this.state.isStreaming) {
-        const markers = [...this.state.markers];
-        markers[markers.length - 1] = obj;
-        this.setState({markers});
-      }
+  initialFetchLocation = async () => {
+    const position = await getLocation();
+    this.setState({
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+      currentPoint: position.coords,
     });
+    if (!this.state.isStreaming) {
+      this.setState({
+        region: {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          latitudeDelta: 0.0922,
+          longitudeDelta: 0.0421,
+        },
+      });
+    }
   };
 
   calculateRoute = async () => {
@@ -221,44 +215,6 @@ export class Home extends React.Component {
   stopNavigation = () => {
     this.setState({isNavigating: false});
     BackgroundTimer.clearInterval(looper);
-  };
-
-  getMockData = () => {
-    const maneuvers = Maneuvers;
-    const messages = [
-      'Leave from Ramganesh Gadkari Road',
-      'Turn right onto Kasaba Peth in 90 mts',
-      'Turn left onto Chhatrapati Shivaji Maharaj Road/NH4',
-    ];
-    const distances = [
-      '20 m',
-      '30 m',
-      '40 m',
-      '50 m',
-      '60 m',
-      '70 m',
-      '80 m',
-      '90 m',
-      '1.2 km',
-      '1.5 km',
-      '1.4 km',
-      '2.0 km',
-    ];
-    const angles = [45, 90, -45, -90];
-    const getRandom = array => {
-      const idx = Math.floor(Math.random() * (array.length - 1));
-      return array[idx];
-    };
-
-    // Mock
-    const message = {
-      maneuver: getRandom(maneuvers).value,
-      display: getRandom(maneuvers).display,
-      message: getRandom(messages),
-      distance: getRandom(distances),
-      turnAngle: getRandom(angles),
-    };
-    return message;
   };
 
   calculateNavigation = async () => {
@@ -328,7 +284,7 @@ export class Home extends React.Component {
     // create the next message`
     let messageObj;
     if (mock) {
-      messageObj = this.getMockData();
+      messageObj = createMockNavigationData();
     } else {
       // find the respective instruction
       const currentInstruction = route.find(r => r.point === nearestLine.to);
@@ -336,10 +292,10 @@ export class Home extends React.Component {
         'TCL: Home -> calculateNavigation -> currentInstruction',
         currentInstruction,
       );
-      messageObj = createInstructionObj(currentInstruction, alongLineDistance);
+      messageObj = createNavigationData(currentInstruction, alongLineDistance);
     }
     this.setState({currentInstruction: messageObj});
-    const result = await sendData(messageObj);
+    await sendData(messageObj);
   };
 
   renderInstructions = instructions => {
@@ -366,11 +322,6 @@ export class Home extends React.Component {
         )}
       </List>
     ) : null;
-  };
-
-  onDrag = event => {
-    const coord = event.nativeEvent.coordinate;
-    this.setState({currentPoint: coord});
   };
 
   renderMap() {
