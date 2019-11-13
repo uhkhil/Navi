@@ -1,5 +1,5 @@
 import React from 'react';
-import {Alert} from 'react-native';
+import {Alert, Fragment} from 'react-native';
 import {
   Container,
   Content,
@@ -16,6 +16,7 @@ import {
   Spinner,
   CheckBox,
   Body,
+  View,
 } from 'native-base';
 import BackgroundTimer from 'react-native-background-timer';
 import SystemSetting from 'react-native-system-setting';
@@ -68,6 +69,12 @@ export class Home extends React.Component {
       latitudeDelta: 0.0922,
       longitudeDelta: 0.0421,
     },
+    currentRegion: {
+      latitude: 18.5553581313748,
+      longitude: 73.87878940594761,
+      latitudeDelta: 0.0922,
+      longitudeDelta: 0.0421,
+    },
     markers: [],
     loading: false,
     polyline: [],
@@ -78,6 +85,8 @@ export class Home extends React.Component {
     expectedPoint: null,
     currentPoint: null,
     mockLocation: false,
+    followUser: true,
+    testResult: '',
   };
 
   async componentDidMount() {
@@ -116,7 +125,9 @@ export class Home extends React.Component {
         value,
       },
     });
-    setTimeout(this.calculateRoute, 0);
+    if (this.state.from.value !== value && this.state.to.text !== '') {
+      setTimeout(this.calculateRoute, 0);
+    }
   };
 
   returnToPlace = (text, value) => {
@@ -126,7 +137,9 @@ export class Home extends React.Component {
         value,
       },
     });
-    setTimeout(this.calculateRoute, 0);
+    if (this.state.to.value !== value) {
+      setTimeout(this.calculateRoute, 0);
+    }
   };
 
   setMarkers = data => {
@@ -152,6 +165,7 @@ export class Home extends React.Component {
 
   onDrag = event => {
     const coord = event.nativeEvent.coordinate;
+    console.log('TCL: Home -> coord', coord);
     this.setState({currentPoint: coord});
   };
 
@@ -162,7 +176,8 @@ export class Home extends React.Component {
       longitude: position.coords.longitude,
       currentPoint: position.coords,
     });
-    if (!this.state.isStreaming) {
+    if (!this.state.isNavigating) {
+      console.log('setting region');
       this.setState({
         region: {
           latitude: position.coords.latitude,
@@ -188,6 +203,7 @@ export class Home extends React.Component {
     }
     this.setState({loading: true});
     const result = await calculateRoute(from.value, to.value);
+    this.stopNavigation();
     this.toggleWifi(true);
     if (!result.status) {
       Alert.alert('Oops', 'Something went wrong');
@@ -196,6 +212,7 @@ export class Home extends React.Component {
     }
     const route = result.route;
     this.setState({route, loading: false});
+
     this.drawRoute();
   };
 
@@ -205,6 +222,7 @@ export class Home extends React.Component {
     this.addMarker(route[0].point, 'Source');
     this.addMarker(route[route.length - 1].point, 'Destination');
     this.setState({polyline});
+    console.log('TCL: Home -> drawRoute -> polyline', polyline);
   };
 
   startNavigation = () => {
@@ -226,7 +244,7 @@ export class Home extends React.Component {
     // fetch current location
     let current;
     if (mockLocation) {
-      current = this.state.currentLocation;
+      current = this.state.currentPoint;
     } else {
       const position = await getLocation();
       current = position.coords;
@@ -296,6 +314,40 @@ export class Home extends React.Component {
     await sendData(messageObj);
   };
 
+  setCurrent = async () => {
+    const position = await getLocation();
+    this.setState({
+      currentRegion: {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+      },
+    });
+  };
+
+  recenter = () => {
+    this.setState({
+      followUser: true,
+    });
+  };
+
+  sendTestData = () => {
+    const obj = {
+      distance: '2 km',
+    };
+    console.log('TCL: Home -> sendTestData -> obj', obj);
+    sendData(obj)
+      .then(res => {
+        console.log('TCL: Home -> sendTestData -> res', res);
+        this.setState({testResult: res});
+      })
+      .catch(err => {
+        console.warn('TCL: Home -> sendTestData -> err', err);
+        this.setState({testResult: err});
+      });
+  };
+
   renderInstructions = instructions => {
     return instructions.length ? (
       <List style={styles.instructionList}>
@@ -309,63 +361,73 @@ export class Home extends React.Component {
             </ListItem>
           );
         })}
-        {this.state.isNavigating ? (
-          <Button full large danger onPress={this.stopNavigation}>
-            <Text>Stop</Text>
-          </Button>
-        ) : (
-          <Button full large success onPress={this.startNavigation}>
-            <Text>Start</Text>
-          </Button>
-        )}
       </List>
     ) : null;
   };
 
   renderMap() {
     return (
-      <MapView
-        style={styles.map}
-        initialRegion={this.state.region}
-        // region={this.state.region}
-        // followsUserLocation={this.state.isNavigating}
-        on>
-        <Polyline coordinates={this.state.polyline} />
-        {this.state.markers.map((marker, idx) => (
-          <Marker
-            key={idx}
-            draggable={marker.type === 'current'}
-            onDrag={this.onDrag}
-            coordinate={marker.latlng}
-            title={marker.title}
-            description={marker.description}
-            pinColor={marker.type === 'current' ? 'lightblue' : 'red'}
-          />
-        ))}
-        {this.state.expectedPoint ? (
-          <Marker
-            coordinate={this.state.expectedPoint}
-            title="Expected"
-            pinColor="darkblue"
-          />
-        ) : null}
-        {this.state.currentPoint ? (
-          <Marker
-            coordinate={this.state.currentPoint}
-            title="Actual"
-            draggable={this.state.mockLocation}
-            onDrag={this.onDrag}
-            pinColor="lightblue"
-          />
-        ) : null}
-        {this.state.nextPoint ? (
-          <Marker
-            coordinate={this.state.nextPoint}
-            title="Next stop"
-            pinColor="green"
-          />
-        ) : null}
-      </MapView>
+      <View>
+        <MapView
+          style={styles.map}
+          initialRegion={this.state.region}
+          region={this.state.currentRegion}
+          onPanDrag={event => {
+            console.log('TCL: Home -> renderMap -> event', event);
+            this.setState({followUser: false, currentRegion: null});
+          }}
+          // region={this.state.region}
+          followsUserLocation={this.state.followUser}>
+          <Polyline coordinates={this.state.polyline} />
+          {this.state.markers.map((marker, idx) => (
+            <Marker
+              key={idx}
+              coordinate={marker.latlng}
+              title={marker.title}
+              description={marker.description}
+              pinColor="red"
+            />
+          ))}
+          {this.state.expectedPoint ? (
+            <Marker
+              coordinate={this.state.expectedPoint}
+              title="Expected"
+              pinColor="darkblue"
+            />
+          ) : null}
+          {this.state.currentPoint ? (
+            <Marker
+              coordinate={this.state.currentPoint}
+              title="Actual"
+              draggable={this.state.mockLocation}
+              onDragEnd={this.onDrag}
+              pinColor="lightblue"
+            />
+          ) : null}
+          {this.state.nextPoint ? (
+            <Marker
+              coordinate={this.state.nextPoint}
+              title="Next stop"
+              pinColor="green"
+            />
+          ) : null}
+        </MapView>
+        <View
+          style={{
+            position: 'absolute',
+            bottom: 10,
+            right: 20,
+            height: 100,
+            justifyContent: 'space-around',
+          }}>
+          {/* <Button rounded onPress={this.recenter}>
+            <Text>Recenter</Text>
+          </Button> */}
+          <Button rounded onPress={this.setCurrent}>
+            <Text>Current</Text>
+          </Button>
+        </View>
+      </View>
     );
   }
 
@@ -409,7 +471,11 @@ export class Home extends React.Component {
   }
 
   renderTransmittedData = data => {
-    return <Text>{JSON.stringify(data, null, 2)}</Text>;
+    return (
+      <View style={styles.code}>
+        <Text>{JSON.stringify(data, null, 2)}</Text>
+      </View>
+    );
   };
 
   renderSettings = () => {
@@ -440,8 +506,35 @@ export class Home extends React.Component {
             <Text>Draggable current location</Text>
           </Body>
         </ListItem>
+        <ListItem>
+          <Button primary onPress={this.sendTestData}>
+            <Text> Send test data </Text>
+          </Button>
+        </ListItem>
+        <ListItem>
+          <View style={styles.code}>
+            <Text>{JSON.stringify(this.state.testResult, null, 2)}</Text>
+          </View>
+        </ListItem>
       </List>
     );
+  };
+
+  renderNavigation = () => {
+    return this.state.route.length ? (
+      <View>
+        {this.renderInstructions(this.state.route)}
+        {this.state.isNavigating ? (
+          <Button full large danger onPress={this.stopNavigation}>
+            <Text>Stop</Text>
+          </Button>
+        ) : (
+          <Button full large success onPress={this.startNavigation}>
+            <Text>Start</Text>
+          </Button>
+        )}
+      </View>
+    ) : null;
   };
 
   render() {
@@ -465,7 +558,7 @@ export class Home extends React.Component {
                   <Text>Navigate</Text>
                 </TabHeading>
               }>
-              {this.renderInstructions(this.state.route)}
+              {this.renderNavigation()}
             </Tab>
             <Tab
               heading={
