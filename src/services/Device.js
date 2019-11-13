@@ -1,11 +1,18 @@
-import axios from 'axios';
+// import axios from 'axios';
 import {Constants} from '../constants/Constants';
 
 export const sendData = async data => {
   try {
-    const result = await axios.post(
+    const result = await fetch(
       Constants.DEVICE_BASE + Constants.DEVICE_API.SEND,
-      data,
+      {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      },
     );
     console.log('TCL: result', result);
     return {status: true, result, message: result.data};

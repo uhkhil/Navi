@@ -36,4 +36,7 @@ export const styles = StyleSheet.create({
   tabs: {
     elevation: -1,
   },
+  code: {
+    margin: 20,
+  },
 });
