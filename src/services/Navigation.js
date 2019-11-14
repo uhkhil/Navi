@@ -63,12 +63,20 @@ export const createMockNavigationData = () => {
   return message;
 };
 
+const humanifyDistance = given => {
+  let distance = parseInt(given, 10);
+  if (distance > 1000) {
+    return (distance / 1000).toFixed(1) + ' km';
+  }
+  return distance + ' m';
+};
+
 export const createNavigationData = (instruction, distance) => {
   const messageObj = {
     maneuver: instruction.maneuver,
     display: Maneuvers.find(m => m.value === instruction.maneuver).display,
     message: instruction.message,
-    distance: distance + ' m',
+    distance: humanifyDistance(distance),
     turnAngle: instruction.turnAngleInDecimalDegrees,
   };
   return messageObj;
