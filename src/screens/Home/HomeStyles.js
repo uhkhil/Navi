@@ -39,4 +39,12 @@ export const styles = StyleSheet.create({
   code: {
     margin: 20,
   },
+  mapButtons: {
+    flexDirection: 'column-reverse',
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
+    height: 125,
+    justifyContent: 'space-between',
+  },
 });
