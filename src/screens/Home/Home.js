@@ -85,7 +85,7 @@ export class Home extends React.Component {
     expectedPoint: null,
     currentPoint: null,
     mockLocation: false,
-    followUser: true,
+    followUser: false,
     testResult: '',
   };
 
@@ -180,6 +180,12 @@ export class Home extends React.Component {
       console.log('setting region');
       this.setState({
         region: {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          latitudeDelta: 0.0922,
+          longitudeDelta: 0.0421,
+        },
+        currentRegion: {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
           latitudeDelta: 0.0922,
@@ -365,6 +371,14 @@ export class Home extends React.Component {
     ) : null;
   };
 
+  onPanDrag = event => {
+    this.setState({followUser: false, currentRegion: null});
+  };
+
+  setupDevice = () => {
+    this.props.navigation.navigate('Setup');
+  };
+
   renderMap() {
     return (
       <View>
@@ -372,12 +386,9 @@ export class Home extends React.Component {
           style={styles.map}
           initialRegion={this.state.region}
           region={this.state.currentRegion}
-          onPanDrag={event => {
-            console.log('TCL: Home -> renderMap -> event', event);
-            this.setState({followUser: false, currentRegion: null});
-          }}
+          onPanDrag={this.onPanDrag}
           // region={this.state.region}
-          followsUserLocation={this.state.followUser}>
+          followsUserLocation={false}>
           <Polyline coordinates={this.state.polyline} />
           {this.state.markers.map((marker, idx) => (
             <Marker
@@ -412,20 +423,15 @@ export class Home extends React.Component {
             />
           ) : null}
         </MapView>
-        <View
-          style={{
-            position: 'absolute',
-            bottom: 10,
-            right: 20,
-            height: 100,
-            justifyContent: 'space-around',
-          }}>
-          {/* <Button rounded onPress={this.recenter}>
-            <Text>Recenter</Text>
-          </Button> */}
+        <View style={styles.mapButtons}>
           <Button rounded onPress={this.setCurrent}>
             <Text>Current</Text>
           </Button>
+          {/* {this.state.followUser ? null : (
+            <Button rounded onPress={this.recenter}>
+              <Text>Recenter</Text>
+            </Button>
+          )} */}
         </View>
       </View>
     );
@@ -515,6 +521,11 @@ export class Home extends React.Component {
           <View style={styles.code}>
             <Text>{JSON.stringify(this.state.testResult, null, 2)}</Text>
           </View>
+        </ListItem>
+        <ListItem>
+          <Button primary onPress={this.setupDevice}>
+            <Text> Setup device </Text>
+          </Button>
         </ListItem>
       </List>
     );
