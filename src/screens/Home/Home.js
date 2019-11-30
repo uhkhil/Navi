@@ -35,6 +35,7 @@ import {
   calculateRoute,
   createNavigationData,
   createMockNavigationData,
+  getRegionForCoordinates,
 } from '../../services/Navigation';
 import {requestLocationPermission} from '../../services/Permission';
 import {styles} from './HomeStyles';
@@ -227,8 +228,10 @@ export class Home extends React.Component {
     const polyline = route.map(i => i.point);
     this.addMarker(route[0].point, 'Source');
     this.addMarker(route[route.length - 1].point, 'Destination');
-    this.setState({polyline});
-    console.log('TCL: Home -> drawRoute -> polyline', polyline);
+    this.setState({
+      polyline,
+    });
+    this.mapView.animateToRegion(getRegionForCoordinates(polyline), 1000);
   };
 
   startNavigation = () => {
@@ -387,6 +390,9 @@ export class Home extends React.Component {
           initialRegion={this.state.region}
           region={this.state.currentRegion}
           onPanDrag={this.onPanDrag}
+          ref={map => {
+            this.mapView = map;
+          }}
           // region={this.state.region}
           followsUserLocation={false}>
           <Polyline coordinates={this.state.polyline} />
