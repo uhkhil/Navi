@@ -231,7 +231,11 @@ export class Home extends React.Component {
     this.setState({
       polyline,
     });
-    this.mapView.animateToRegion(getRegionForCoordinates(polyline), 1000);
+    const currentRegion = getRegionForCoordinates(polyline);
+    this.mapView.animateToRegion(currentRegion, 1000);
+    setTimeout(() => {
+      this.setState({currentRegion});
+    }, 1001);
   };
 
   startNavigation = () => {
