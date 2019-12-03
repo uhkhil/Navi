@@ -21,7 +21,7 @@ import {
 import BackgroundTimer from 'react-native-background-timer';
 import SystemSetting from 'react-native-system-setting';
 import MapView, {Marker, Polyline} from 'react-native-maps';
-import Geolocation from '@react-native-community/geolocation';
+import Geolocation from 'react-native-geolocation-service';
 
 import {
   getDistanceFromLine,
