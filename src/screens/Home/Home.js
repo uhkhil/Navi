@@ -1,5 +1,5 @@
 import React from 'react';
-import {Alert, Fragment} from 'react-native';
+import {Alert} from 'react-native';
 import {
   Container,
   Content,
@@ -39,6 +39,7 @@ import {
 } from '../../services/Navigation';
 import {requestLocationPermission} from '../../services/Permission';
 import {styles} from './HomeStyles';
+import {Navigation} from '../../components/Navigation/Navigation';
 
 const getLocation = () =>
   new Promise((resolve, reject) => {
@@ -210,7 +211,7 @@ export class Home extends React.Component {
     }
     this.setState({loading: true});
     const result = await calculateRoute(from.value, to.value);
-    this.stopNavigation();
+    this.startNavigation(false);
     this.toggleWifi(true);
     if (!result.status) {
       Alert.alert('Oops', 'Something went wrong');
@@ -238,16 +239,15 @@ export class Home extends React.Component {
     }, 1001);
   };
 
-  startNavigation = () => {
-    this.setState({isNavigating: !this.state.isNavigating});
-    looper = BackgroundTimer.setInterval(() => {
-      this.calculateNavigation();
-    }, 2000);
-  };
-
-  stopNavigation = () => {
-    this.setState({isNavigating: false});
-    BackgroundTimer.clearInterval(looper);
+  startNavigation = value => {
+    this.setState({isNavigating: value});
+    if (value) {
+      looper = BackgroundTimer.setInterval(() => {
+        this.calculateNavigation();
+      }, 2000);
+    } else {
+      BackgroundTimer.clearInterval(looper);
+    }
   };
 
   calculateNavigation = async () => {
@@ -359,23 +359,6 @@ export class Home extends React.Component {
         console.warn('TCL: Home -> sendTestData -> err', err);
         this.setState({testResult: err});
       });
-  };
-
-  renderInstructions = instructions => {
-    return instructions.length ? (
-      <List style={styles.instructionList}>
-        <ListItem bordered itemDivider>
-          <Text>Steps</Text>
-        </ListItem>
-        {instructions.map((instuct, inx) => {
-          return (
-            <ListItem key={inx}>
-              <Text>{instuct.message}</Text>
-            </ListItem>
-          );
-        })}
-      </List>
-    ) : null;
   };
 
   onPanDrag = event => {
@@ -541,23 +524,6 @@ export class Home extends React.Component {
     );
   };
 
-  renderNavigation = () => {
-    return this.state.route.length ? (
-      <View>
-        {this.renderInstructions(this.state.route)}
-        {this.state.isNavigating ? (
-          <Button full large danger onPress={this.stopNavigation}>
-            <Text>Stop</Text>
-          </Button>
-        ) : (
-          <Button full large success onPress={this.startNavigation}>
-            <Text>Start</Text>
-          </Button>
-        )}
-      </View>
-    ) : null;
-  };
-
   render() {
     return (
       <Container>
@@ -579,7 +545,11 @@ export class Home extends React.Component {
                   <Text>Navigate</Text>
                 </TabHeading>
               }>
-              {this.renderNavigation()}
+              <Navigation
+                route={this.state.route}
+                startNavigation={this.startNavigation}
+                isNavigating={this.state.isNavigating}
+              />
             </Tab>
             <Tab
               heading={

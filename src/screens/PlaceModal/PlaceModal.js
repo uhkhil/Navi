@@ -14,9 +14,9 @@ import {
   Body,
 } from 'native-base';
 import {debounce} from 'lodash';
-import {TOMTOM_API_KEY} from '../../constants/Constants';
+import {Constants} from '../../constants/Constants';
 
-const key = TOMTOM_API_KEY;
+const key = Constants.API_KEY;
 
 export class PlaceModal extends React.Component {
   constructor() {
@@ -67,6 +67,7 @@ export class PlaceModal extends React.Component {
   };
 
   searchLocation = searchString => {
+    console.log('TCL: PlaceModal -> key', key);
     const promise = new Promise((resolve, reject) => {
       const url = `https://api.tomtom.com/search/2/search/${searchString}.json?countrySet=IN&idxSet=POI&key=${key}`;
       fetch(url)
