@@ -4,5 +4,5 @@ export const Constants = {
     SEND: '/send',
     SETUP: '/setup',
   },
-  TOMTOM_API_KEY: '64TILwSA0P0DyYtwQd6BvOa8BsvBzSP4',
+  API_KEY: '64TILwSA0P0DyYtwQd6BvOa8BsvBzSP4',
 };
