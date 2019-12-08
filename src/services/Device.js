@@ -2,6 +2,7 @@
 import {Constants} from '../constants/Constants';
 
 export const sendData = async data => {
+  console.log('TCL: data', data);
   try {
     const result = await fetch(
       Constants.DEVICE_BASE + Constants.DEVICE_API.SEND,

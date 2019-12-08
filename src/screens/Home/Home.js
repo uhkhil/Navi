@@ -18,7 +18,6 @@ import {
   Body,
   View,
 } from 'native-base';
-import BackgroundTimer from 'react-native-background-timer';
 import SystemSetting from 'react-native-system-setting';
 import MapView, {Marker, Polyline} from 'react-native-maps';
 import Geolocation from 'react-native-geolocation-service';
@@ -47,8 +46,6 @@ const getLocation = () =>
       resolve(position);
     });
   });
-
-let looper;
 
 export class Home extends React.Component {
   state = {
@@ -242,11 +239,9 @@ export class Home extends React.Component {
   startNavigation = value => {
     this.setState({isNavigating: value});
     if (value) {
-      looper = BackgroundTimer.setInterval(() => {
-        this.calculateNavigation();
-      }, 2000);
+      this.calculateNavigation();
     } else {
-      BackgroundTimer.clearInterval(looper);
+      Geolocation.stopObserving();
     }
   };
 
@@ -254,77 +249,89 @@ export class Home extends React.Component {
     const {mock, route, mockLocation} = this.state;
     const points = route.map(r => r.point);
 
-    // fetch current location
-    let current;
-    if (mockLocation) {
-      current = this.state.currentPoint;
-    } else {
-      const position = await getLocation();
-      current = position.coords;
-      this.setState({currentPoint: current});
-    }
+    Geolocation.watchPosition(
+      async position => {
+        console.log('TCL: Home -> calculateNavigation -> position', position);
+        // fetch current location
+        let current;
+        if (mockLocation) {
+          current = this.state.currentPoint;
+        } else {
+          current = position.coords;
+          this.setState({currentPoint: current});
+        }
 
-    // locate the position on the polyline
-    // find the closest line
+        // locate the position on the polyline
+        // find the closest line
 
-    const nearestPoints = orderByDistance(current, points).slice(0, 5);
+        const nearestPoints = orderByDistance(current, points).slice(0, 5);
 
-    const nearestLines = [];
-    nearestPoints.forEach(point => {
-      const pointIndex = points.indexOf(point);
-      if (pointIndex !== 0) {
-        const prev = {
-          from: points[pointIndex - 1],
-          to: points[pointIndex],
-        };
-        nearestLines.push(prev);
-      }
-      if (pointIndex !== points.length - 1) {
-        const next = {
-          from: points[pointIndex],
-          to: points[pointIndex + 1],
-        };
-        nearestLines.push(next);
-      }
-    });
+        const nearestLines = [];
+        nearestPoints.forEach(point => {
+          const pointIndex = points.indexOf(point);
+          if (pointIndex !== 0) {
+            const prev = {
+              from: points[pointIndex - 1],
+              to: points[pointIndex],
+            };
+            nearestLines.push(prev);
+          }
+          if (pointIndex !== points.length - 1) {
+            const next = {
+              from: points[pointIndex],
+              to: points[pointIndex + 1],
+            };
+            nearestLines.push(next);
+          }
+        });
 
-    const nearestLine = nearestLines
-      .map(line => {
-        line.distance = getDistanceFromLine(current, line.from, line.to);
-        return line;
-      })
-      .filter(line => typeof line.distance === 'number')
-      .sort((a, b) => a.distance > b.distance)[0];
+        const nearestLine = nearestLines
+          .map(line => {
+            line.distance = getDistanceFromLine(current, line.from, line.to);
+            return line;
+          })
+          .filter(line => typeof line.distance === 'number')
+          .sort((a, b) => a.distance > b.distance)[0];
 
-    this.setState({nextPoint: nearestLine.to});
+        this.setState({nextPoint: nearestLine.to});
 
-    // calculate sides of the hypotenuse triangle
-    const hypotenuse = getDistance(current, nearestLine.to);
-    const alongLineDistance = Math.sqrt(
-      Math.pow(hypotenuse, 2) - Math.pow(nearestLine.distance, 2),
+        // calculate sides of the hypotenuse triangle
+        const hypotenuse = getDistance(current, nearestLine.to);
+        const alongLineDistance = Math.sqrt(
+          Math.pow(hypotenuse, 2) - Math.pow(nearestLine.distance, 2),
+        );
+
+        // find the point along the polyline
+        const bearing = getGreatCircleBearing(nearestLine.from, nearestLine.to);
+
+        const expectedPoint = computeDestinationPoint(
+          nearestLine.to,
+          -alongLineDistance,
+          bearing,
+        );
+        this.setState({expectedPoint});
+
+        // create the next message`
+        let messageObj;
+        if (mock) {
+          messageObj = createMockNavigationData();
+        } else {
+          // find the respective instruction
+          const currentInstruction = route.find(
+            r => r.point === nearestLine.to,
+          );
+          messageObj = createNavigationData(
+            currentInstruction,
+            alongLineDistance,
+          );
+        }
+        this.setState({currentInstruction: messageObj});
+        await sendData(messageObj);
+      },
+      err => {
+        console.warn(err);
+      },
     );
-
-    // find the point along the polyline
-    const bearing = getGreatCircleBearing(nearestLine.from, nearestLine.to);
-
-    const expectedPoint = computeDestinationPoint(
-      nearestLine.to,
-      -alongLineDistance,
-      bearing,
-    );
-    this.setState({expectedPoint});
-
-    // create the next message`
-    let messageObj;
-    if (mock) {
-      messageObj = createMockNavigationData();
-    } else {
-      // find the respective instruction
-      const currentInstruction = route.find(r => r.point === nearestLine.to);
-      messageObj = createNavigationData(currentInstruction, alongLineDistance);
-    }
-    this.setState({currentInstruction: messageObj});
-    await sendData(messageObj);
   };
 
   setCurrent = async () => {
