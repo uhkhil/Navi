@@ -14,8 +14,9 @@ import {
   Body,
 } from 'native-base';
 import {debounce} from 'lodash';
+import {TOMTOM_API_KEY} from '../../constants/Constants';
 
-const key = 'QxKUhPa8OHWrKshETgGXGsjEzPZOTiGE';
+const key = TOMTOM_API_KEY;
 
 export class PlaceModal extends React.Component {
   constructor() {

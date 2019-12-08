@@ -1,7 +1,8 @@
 import axios from 'axios';
 import {Maneuvers} from '../constants/Maneuvers';
+import {TOMTOM_API_KEY} from '../constants/Constants';
 
-const key = 'QxKUhPa8OHWrKshETgGXGsjEzPZOTiGE';
+const key = TOMTOM_API_KEY;
 
 export const calculateRoute = async (from, to) => {
   try {
