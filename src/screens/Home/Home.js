@@ -21,6 +21,7 @@ import {
 import SystemSetting from 'react-native-system-setting';
 import MapView, {Marker, Polyline} from 'react-native-maps';
 import Geolocation from 'react-native-geolocation-service';
+import BackgroundTimer from 'react-native-background-timer';
 
 import {
   getDistanceFromLine,
@@ -239,7 +240,9 @@ export class Home extends React.Component {
   startNavigation = value => {
     this.setState({isNavigating: value});
     if (value) {
-      this.calculateNavigation();
+      this.looper = BackgroundTimer.setTimeout(() => {
+        this.calculateNavigation();
+      }, 0);
     } else {
       Geolocation.stopObserving();
     }
@@ -250,7 +253,7 @@ export class Home extends React.Component {
     const points = route.map(r => r.point);
 
     Geolocation.watchPosition(
-      async position => {
+      position => {
         console.log('TCL: Home -> calculateNavigation -> position', position);
         // fetch current location
         let current;
@@ -326,10 +329,18 @@ export class Home extends React.Component {
           );
         }
         this.setState({currentInstruction: messageObj});
-        await sendData(messageObj);
+        sendData(messageObj);
       },
       err => {
         console.warn(err);
+      },
+      {
+        enableHighAccuracy: true,
+        interval: 1000,
+        fastestInterval: 100,
+        distanceFilter: 1,
+        showLocationDialog: true,
+        forceRequestLocation: true,
       },
     );
   };
