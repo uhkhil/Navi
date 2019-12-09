@@ -21,6 +21,7 @@ import {
 import SystemSetting from 'react-native-system-setting';
 import MapView, {Marker, Polyline} from 'react-native-maps';
 import Geolocation from 'react-native-geolocation-service';
+import BackgroundTimer from 'react-native-background-timer';
 
 import {
   getDistanceFromLine,
@@ -239,7 +240,9 @@ export class Home extends React.Component {
   startNavigation = value => {
     this.setState({isNavigating: value});
     if (value) {
-      this.calculateNavigation();
+      this.looper = BackgroundTimer.setTimeout(() => {
+        this.calculateNavigation();
+      }, 0);
     } else {
       Geolocation.stopObserving();
     }
