@@ -250,7 +250,7 @@ export class Home extends React.Component {
     const points = route.map(r => r.point);
 
     Geolocation.watchPosition(
-      async position => {
+      position => {
         console.log('TCL: Home -> calculateNavigation -> position', position);
         // fetch current location
         let current;
@@ -326,10 +326,18 @@ export class Home extends React.Component {
           );
         }
         this.setState({currentInstruction: messageObj});
-        await sendData(messageObj);
+        sendData(messageObj);
       },
       err => {
         console.warn(err);
+      },
+      {
+        enableHighAccuracy: true,
+        interval: 1000,
+        fastestInterval: 100,
+        distanceFilter: 1,
+        showLocationDialog: true,
+        forceRequestLocation: true,
       },
     );
   };
