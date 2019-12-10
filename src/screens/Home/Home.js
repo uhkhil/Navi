@@ -21,7 +21,7 @@ import {
 import SystemSetting from 'react-native-system-setting';
 import MapView, {Marker, Polyline} from 'react-native-maps';
 import Geolocation from 'react-native-geolocation-service';
-import BackgroundTimer from 'react-native-background-timer';
+import VIForegroundService from '@voximplant/react-native-foreground-service';
 
 import {
   getDistanceFromLine,
@@ -237,18 +237,40 @@ export class Home extends React.Component {
     }, 1001);
   };
 
-  startNavigation = value => {
+  startForegroundService = async () => {
+    const notificationConfig = {
+      channelId: 'navigation',
+      id: 3456,
+      title: 'You are navigating!',
+      text: 'Please do not close this notification.',
+      icon: 'ic_launcher',
+    };
+    try {
+      await VIForegroundService.startService(notificationConfig);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  startNavigation = async value => {
     this.setState({isNavigating: value});
     if (value) {
-      this.looper = BackgroundTimer.setTimeout(() => {
-        this.calculateNavigation();
-      }, 0);
+      const channelConfig = {
+        id: 'navigation',
+        name: 'Navigation',
+        description:
+          'Shows direction to the user, keeps the location services on.',
+        enableVibration: true,
+      };
+      await VIForegroundService.createNotificationChannel(channelConfig);
+      await this.startForegroundService();
+      this.calculateNavigation();
     } else {
       Geolocation.stopObserving();
     }
   };
 
-  calculateNavigation = async () => {
+  calculateNavigation = () => {
     const {mock, route, mockLocation} = this.state;
     const points = route.map(r => r.point);
 
@@ -341,8 +363,8 @@ export class Home extends React.Component {
         distanceFilter: 1,
         showLocationDialog: true,
         forceRequestLocation: true,
-        timeout: 5000,
-        maximumAge: 1000,
+        timeout: 1000,
+        maximumAge: 0,
       },
     );
   };
