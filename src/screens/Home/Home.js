@@ -237,12 +237,15 @@ export class Home extends React.Component {
     }, 1001);
   };
 
-  startForegroundService = async () => {
+  startForegroundService = async (
+    title = 'You are navigating!',
+    message = 'Please do not close this notification',
+  ) => {
     const notificationConfig = {
       channelId: 'navigation',
       id: 3456,
-      title: 'You are navigating!',
-      text: 'Please do not close this notification.',
+      title: title,
+      text: message,
       icon: 'ic_launcher',
     };
     try {
@@ -266,6 +269,7 @@ export class Home extends React.Component {
       await this.startForegroundService();
       this.calculateNavigation();
     } else {
+      await VIForegroundService.stopService();
       Geolocation.stopObserving();
     }
   };
@@ -350,6 +354,10 @@ export class Home extends React.Component {
             alongLineDistance,
           );
         }
+        this.startForegroundService(
+          messageObj.display + ' in ' + messageObj.distance,
+          messageObj.message,
+        );
         this.setState({currentInstruction: messageObj});
         sendData(messageObj);
       },
