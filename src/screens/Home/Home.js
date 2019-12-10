@@ -341,6 +341,8 @@ export class Home extends React.Component {
         distanceFilter: 1,
         showLocationDialog: true,
         forceRequestLocation: true,
+        timeout: 5000,
+        maximumAge: 1000,
       },
     );
   };
