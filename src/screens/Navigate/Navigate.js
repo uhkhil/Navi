@@ -3,7 +3,6 @@ import {Alert} from 'react-native';
 import {
   Container,
   Content,
-  Button,
   Text,
   List,
   ListItem,
@@ -14,12 +13,8 @@ import {
   Tab,
   TabHeading,
   Spinner,
-  CheckBox,
-  Body,
-  View,
 } from 'native-base';
 import SystemSetting from 'react-native-system-setting';
-import MapView, {Marker, Polyline} from 'react-native-maps';
 import Geolocation from 'react-native-geolocation-service';
 import VIForegroundService from '@voximplant/react-native-foreground-service';
 
@@ -38,8 +33,9 @@ import {
   getRegionForCoordinates,
 } from '../../services/Navigation';
 import {requestLocationPermission} from '../../services/Permission';
-import {styles} from './HomeStyles';
+import {styles} from './NavigateStyles';
 import {Navigation} from '../../components/Navigation/Navigation';
+import {Map} from '../../components/Map/Map';
 
 const getLocation = () =>
   new Promise((resolve, reject) => {
@@ -48,7 +44,7 @@ const getLocation = () =>
     });
   });
 
-export class Home extends React.Component {
+export class Navigate extends React.Component {
   state = {
     from: {
       text: '',
@@ -64,14 +60,14 @@ export class Home extends React.Component {
     logs: [],
     wifiState: true,
     region: {
-      latitude: 18.5553581313748,
-      longitude: 73.87878940594761,
+      latitude: 0,
+      longitude: 0,
       latitudeDelta: 0.0922,
       longitudeDelta: 0.0421,
     },
     currentRegion: {
-      latitude: 18.5553581313748,
-      longitude: 73.87878940594761,
+      latitude: 0,
+      longitude: 0,
       latitudeDelta: 0.0922,
       longitudeDelta: 0.0421,
     },
@@ -97,24 +93,39 @@ export class Home extends React.Component {
     }
   }
 
+  initialFetchLocation = async () => {
+    const position = await getLocation();
+    this.setState({
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+      currentPoint: position.coords,
+    });
+    if (!this.state.isNavigating) {
+      console.log('setting region');
+      this.setState({
+        region: {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          latitudeDelta: 0.0922,
+          longitudeDelta: 0.0421,
+        },
+        currentRegion: {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          latitudeDelta: 0.0922,
+          longitudeDelta: 0.0421,
+        },
+      });
+    }
+  };
+
   checkWifi = () => {
     SystemSetting.isWifiEnabled().then(enable => {
       this.setState({wifiState: enable});
     });
   };
 
-  toggleWifi = wifiState => {
-    this.setState({
-      wifiState,
-    });
-
-    SystemSetting.switchWifiSilence(() => {
-      this.checkWifi();
-    });
-  };
-
   openPlaceModal = (place, action) => {
-    this.toggleWifi(false);
     this.props.navigation.navigate('PlaceModal', {place, action});
   };
 
@@ -169,32 +180,6 @@ export class Home extends React.Component {
     this.setState({currentPoint: coord});
   };
 
-  initialFetchLocation = async () => {
-    const position = await getLocation();
-    this.setState({
-      latitude: position.coords.latitude,
-      longitude: position.coords.longitude,
-      currentPoint: position.coords,
-    });
-    if (!this.state.isNavigating) {
-      console.log('setting region');
-      this.setState({
-        region: {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
-        },
-        currentRegion: {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
-        },
-      });
-    }
-  };
-
   calculateRoute = async () => {
     const {from, to} = this.state;
     const coords = {
@@ -210,7 +195,6 @@ export class Home extends React.Component {
     this.setState({loading: true});
     const result = await calculateRoute(from.value, to.value);
     this.startNavigation(false);
-    this.toggleWifi(true);
     if (!result.status) {
       Alert.alert('Oops', 'Something went wrong');
       this.setState({loading: false});
@@ -395,90 +379,9 @@ export class Home extends React.Component {
     });
   };
 
-  sendTestData = () => {
-    const obj = {
-      distance: '2 km',
-    };
-    console.log('TCL: Home -> sendTestData -> obj', obj);
-    sendData(obj)
-      .then(res => {
-        console.log('TCL: Home -> sendTestData -> res', res);
-        this.setState({testResult: res});
-      })
-      .catch(err => {
-        console.warn('TCL: Home -> sendTestData -> err', err);
-        this.setState({testResult: err});
-      });
-  };
-
   onPanDrag = event => {
     this.setState({followUser: false, currentRegion: null});
   };
-
-  setupDevice = () => {
-    this.props.navigation.navigate('Setup');
-  };
-
-  renderMap() {
-    return (
-      <View>
-        <MapView
-          style={styles.map}
-          initialRegion={this.state.region}
-          region={this.state.currentRegion}
-          onPanDrag={this.onPanDrag}
-          ref={map => {
-            this.mapView = map;
-          }}
-          // region={this.state.region}
-          followsUserLocation={false}>
-          <Polyline coordinates={this.state.polyline} />
-          {this.state.markers.map((marker, idx) => (
-            <Marker
-              key={idx}
-              coordinate={marker.latlng}
-              title={marker.title}
-              description={marker.description}
-              pinColor="red"
-            />
-          ))}
-          {this.state.expectedPoint ? (
-            <Marker
-              coordinate={this.state.expectedPoint}
-              title="Expected"
-              pinColor="darkblue"
-            />
-          ) : null}
-          {this.state.currentPoint ? (
-            <Marker
-              coordinate={this.state.currentPoint}
-              title="Actual"
-              draggable={this.state.mockLocation}
-              onDragEnd={this.onDrag}
-              pinColor="lightblue"
-            />
-          ) : null}
-          {this.state.nextPoint ? (
-            <Marker
-              coordinate={this.state.nextPoint}
-              title="Next stop"
-              pinColor="green"
-            />
-          ) : null}
-        </MapView>
-        <View style={styles.mapButtons}>
-          <Button rounded onPress={this.setCurrent}>
-            <Text>Current</Text>
-          </Button>
-          {/* {this.state.followUser ? null : (
-            <Button rounded onPress={this.recenter}>
-              <Text>Recenter</Text>
-            </Button>
-          )} */}
-        </View>
-      </View>
-    );
-  }
 
   renderSearch() {
     return (
@@ -519,62 +422,17 @@ export class Home extends React.Component {
     );
   }
 
-  renderTransmittedData = data => {
-    return (
-      <View style={styles.code}>
-        <Text>{JSON.stringify(data, null, 2)}</Text>
-      </View>
-    );
-  };
-
-  renderSettings = () => {
-    return (
-      <List>
-        <ListItem header>
-          <Body>
-            <Text>Settings</Text>
-          </Body>
-        </ListItem>
-        <ListItem>
-          <CheckBox
-            checked={this.state.mock}
-            onPress={() => this.setState({mock: !this.state.mock})}
-          />
-          <Body>
-            <Text>Mock data</Text>
-          </Body>
-        </ListItem>
-        <ListItem>
-          <CheckBox
-            checked={this.state.mockLocation}
-            onPress={() =>
-              this.setState({mockLocation: !this.state.mockLocation})
-            }
-          />
-          <Body>
-            <Text>Draggable current location</Text>
-          </Body>
-        </ListItem>
-        <ListItem>
-          <Button primary onPress={this.sendTestData}>
-            <Text> Send test data </Text>
-          </Button>
-        </ListItem>
-        <ListItem>
-          <View style={styles.code}>
-            <Text>{JSON.stringify(this.state.testResult, null, 2)}</Text>
-          </View>
-        </ListItem>
-        <ListItem>
-          <Button primary onPress={this.setupDevice}>
-            <Text> Setup device </Text>
-          </Button>
-        </ListItem>
-      </List>
-    );
-  };
-
   render() {
+    const {
+      region,
+      currentRegion,
+      polyline,
+      markers,
+      currentPoint,
+      expectedPoint,
+      nextPoint,
+      mockLocation,
+    } = this.state;
     return (
       <Container>
         <Content>
@@ -586,7 +444,19 @@ export class Home extends React.Component {
                   <Text>Map</Text>
                 </TabHeading>
               }>
-              {this.renderMap()}
+              <Map
+                region={region}
+                currentRegion={currentRegion}
+                polyline={polyline}
+                markers={markers}
+                currentPoint={currentPoint}
+                expectedPoint={expectedPoint}
+                nextPoint={nextPoint}
+                mockLocation={mockLocation}
+                getRef={ref => (this.mapView = ref)}
+                onPanDrag={this.onPanDrag}
+                setCurrent={this.setCurrent}
+              />
             </Tab>
             <Tab
               heading={
@@ -600,17 +470,6 @@ export class Home extends React.Component {
                 startNavigation={this.startNavigation}
                 isNavigating={this.state.isNavigating}
               />
-            </Tab>
-            <Tab
-              heading={
-                <TabHeading>
-                  <Text>Data</Text>
-                </TabHeading>
-              }>
-              <Content>
-                {this.renderTransmittedData(this.state.currentInstruction)}
-                {this.renderSettings()}
-              </Content>
             </Tab>
           </Tabs>
         </Content>
