@@ -1,10 +1,8 @@
 // import axios from 'axios';
 import {Constants} from '../constants/Constants';
-import {ToastAndroid} from 'react-native';
 
 export const sendData = async data => {
   console.log('TCL: data', data);
-  ToastAndroid.show(data.display + ' : ' + data.distance, ToastAndroid.SHORT);
   try {
     const result = await fetch(
       Constants.DEVICE_BASE + Constants.DEVICE_API.SEND,

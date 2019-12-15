@@ -1135,10 +1135,9 @@
     lodash.unescape "4.0.1"
     semver "5.5.0"
 
-"@voximplant/react-native-foreground-service@^2.0.0":
+"@voximplant/react-native-foreground-service@git+https://git@github.com/uhkhil/react-native-foreground-service.git":
   version "2.0.0"
-  resolved "https://registry.yarnpkg.com/@voximplant/react-native-foreground-service/-/react-native-foreground-service-2.0.0.tgz#06da5b121231a8ffcb13bc792ce67c37f1fbb2d8"
-  integrity sha512-V7hpxvYVsIvbpJaIlhjl4BUsWEzPYKIIfWZOYm0s93VEBmp548xx8f5hSeVuhaR6NqveibxVNr+J011ej/yc2g==
+  resolved "git+https://git@github.com/uhkhil/react-native-foreground-service.git#bb8c9a8874c9096b1a5bb64ef8de8379fc883d78"
 
 abab@^2.0.0:
   version "2.0.2"
