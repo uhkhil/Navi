@@ -1,11 +1,12 @@
 import React from 'react';
 import {StyleSheet} from 'react-native';
-import {Icon, Text} from 'native-base';
+import {Icon, Text, View} from 'native-base';
 import {createAppContainer} from 'react-navigation';
 import {createStackNavigator} from 'react-navigation-stack';
 import {
   createDrawerNavigator,
   DrawerNavigatorItems,
+  DrawerItems,
 } from 'react-navigation-drawer';
 
 import {PlaceModal} from './screens/PlaceModal/PlaceModal';
@@ -13,6 +14,8 @@ import {Setup} from './screens/Setup/Setup';
 import {Onboarding} from './screens/Onboarding/Onboarding';
 import {Dev} from './screens/Dev/Dev';
 import {Main} from './screens/Main/Main';
+import {Landing} from './screens/Landing/Landing';
+import {Colors} from './themes/Colors';
 
 const MainStack = createDrawerNavigator(
   {
@@ -63,11 +66,17 @@ const MainStack = createDrawerNavigator(
     initialRouteName: 'Navigate',
     headerMode: 'none',
     contentComponent: props => (
-      <DrawerNavigatorItems
-        itemsContainerStyle={styles.itemsContainer}
-        itemStyle={styles.item}
-        {...props}
-      />
+      <React.Fragment>
+        <View style={styles.menuBanner}>
+          <Text style={styles.menuBannerText}>Navi</Text>
+        </View>
+        <DrawerItems
+          itemsContainerStyle={styles.itemsContainer}
+          itemStyle={styles.item}
+          {...props}>
+          {props.children}
+        </DrawerItems>
+      </React.Fragment>
     ),
   },
 );
@@ -83,11 +92,14 @@ const RootStack = createStackNavigator(
     Onboarding: {
       screen: Onboarding,
     },
+    Landing: {
+      screen: Landing,
+    },
   },
   {
     mode: 'modal',
     headerMode: 'none',
-    initialRouteName: 'Onboarding',
+    initialRouteName: 'Landing',
   },
 );
 
@@ -105,4 +117,14 @@ const styles = StyleSheet.create({
   },
   itemsContainer: {marginTop: 0},
   item: {padding: 5},
+  menuBanner: {
+    height: 120,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+  },
+  menuBannerText: {
+    color: 'white',
+    fontSize: 30,
+    marginLeft: 40,
+  },
 });

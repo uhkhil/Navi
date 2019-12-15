@@ -25,7 +25,6 @@ export class Map extends React.Component {
       this.mapRef.animateToRegion(getRegionForCoordinates(route), 1000);
     }
     if (currentLocation !== prevProps.currentLocation && !touched) {
-      console.log('change in currentLocation');
       this.mapRef.animateToRegion(
         {
           ...prevState.region,
@@ -38,7 +37,6 @@ export class Map extends React.Component {
   }
 
   setCurrent = () => {
-    console.log('clicked on current');
     const {currentLocation} = this.props;
     const {region} = this.state;
     this.mapRef.animateToRegion({...region, ...currentLocation}, 1000);

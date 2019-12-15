@@ -2,10 +2,13 @@ import React from 'react';
 import {StyleSheet} from 'react-native';
 import OnboardingSwiper from 'react-native-onboarding-swiper';
 import {Icon} from 'native-base';
+import AsyncStorage from '@react-native-community/async-storage';
+
 import {Colors} from '../../themes/Colors';
 
 export class Onboarding extends React.Component {
   done = () => {
+    AsyncStorage.setItem('onboarding', 'done');
     this.props.navigation.navigate('Navigate');
   };
 
