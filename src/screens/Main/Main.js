@@ -1,15 +1,8 @@
 import React from 'react';
 import {Alert, StyleSheet} from 'react-native';
-import {
-  Container,
-  Tabs,
-  Tab,
-  TabHeading,
-  Text,
-  Spinner,
-  View,
-} from 'native-base';
+import {Tabs, Tab, TabHeading, Text, Spinner, View} from 'native-base';
 import Geolocation from 'react-native-geolocation-service';
+import BackgroundTimer from 'react-native-background-timer';
 
 import {Form} from './Form';
 import {
@@ -121,17 +114,12 @@ export class Main extends React.Component {
     }
     const route = result.route;
     const routeComplete = result.legs[0].points;
-    this.setState(
-      {
-        route,
-        routeComplete,
-        routeFetched: true,
-        routeFetching: false,
-      },
-      () => {
-        console.log('updated route state', route);
-      },
-    );
+    this.setState({
+      route,
+      routeComplete,
+      routeFetched: true,
+      routeFetching: false,
+    });
   };
 
   startForegroundService = async (
@@ -167,7 +155,7 @@ export class Main extends React.Component {
       };
       await VIForegroundService.createNotificationChannel(channelConfig);
       this.startForegroundService();
-      this.interval = setInterval(() => {
+      this.interval = BackgroundTimer.setInterval(() => {
         const {route, currentLocation} = this.state;
         const navigation = calculateNavigation(currentLocation, route);
         const {messageObj, nextLocation, expectedLocation} = navigation;
@@ -185,7 +173,7 @@ export class Main extends React.Component {
     } else {
       VIForegroundService.stopService();
       if (this.interval) {
-        clearInterval(this.interval);
+        BackgroundTimer.clearInterval(this.interval);
       }
     }
   };
@@ -211,6 +199,7 @@ export class Main extends React.Component {
           destination={destination}
           changeLocationInput={this.changeLocationInput}
           navigation={navigation}
+          openMenu={this.props.navigation.toggleDrawer}
         />
         <Tabs style={styles.tabs}>
           <Tab
