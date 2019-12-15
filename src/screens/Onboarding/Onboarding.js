@@ -2,6 +2,7 @@ import React from 'react';
 import {StyleSheet} from 'react-native';
 import OnboardingSwiper from 'react-native-onboarding-swiper';
 import {Icon} from 'native-base';
+import {Colors} from '../../themes/Colors';
 
 export class Onboarding extends React.Component {
   done = () => {
@@ -11,14 +12,14 @@ export class Onboarding extends React.Component {
   render() {
     return (
       <OnboardingSwiper
-        showSkip={true}
+        showSkip={false}
         onSkip={this.done}
         onDone={this.done}
         titleStyles={styles.title}
         subTitleStyles={styles.subTitle}
         pages={[
           {
-            backgroundColor: '#03c5be',
+            backgroundColor: Colors.primary,
             image: (
               <Icon
                 type="MaterialCommunityIcons"
@@ -30,19 +31,19 @@ export class Onboarding extends React.Component {
             subtitle: 'Look for the best route to your destination',
           },
           {
-            backgroundColor: '#073b60',
+            backgroundColor: Colors.secondary,
             image: (
               <Icon
                 type="MaterialCommunityIcons"
-                name="bluetooth-connect"
+                name="wifi-strength-4"
                 style={styles.icon}
               />
             ),
             title: 'Connect device',
-            subtitle: 'Connect your NaviCast device via Bluetooth',
+            subtitle: 'Connect your NaviCast device via Wifi',
           },
           {
-            backgroundColor: '#03c5be',
+            backgroundColor: Colors.primary,
             image: (
               <Icon
                 type="MaterialCommunityIcons"
@@ -65,5 +66,5 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   title: {fontWeight: 'bold'},
-  subTitle: {fontSize: 20, color: '#fff'},
+  subTitle: {fontSize: 20, color: '#fff', marginHorizontal: 20},
 });

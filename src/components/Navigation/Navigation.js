@@ -1,5 +1,8 @@
 import React from 'react';
-import {View, Button, Text, List, ListItem} from 'native-base';
+import {StyleSheet} from 'react-native';
+import {View, Text, List, ListItem, Content} from 'native-base';
+import {ScrollView} from 'react-native-gesture-handler';
+import {Colors} from '../../themes/Colors';
 
 export class Navigation extends React.Component {
   renderInstructions = instructions => {
@@ -20,20 +23,28 @@ export class Navigation extends React.Component {
   };
 
   render() {
-    const {route, startNavigation, isNavigating} = this.props;
+    const {route} = this.props;
     return route.length ? (
-      <View>
-        {this.renderInstructions(route)}
-        {isNavigating ? (
-          <Button full large danger onPress={startNavigation.bind(null, false)}>
-            <Text>Stop</Text>
-          </Button>
-        ) : (
-          <Button full large success onPress={startNavigation.bind(null, true)}>
-            <Text>Start</Text>
-          </Button>
-        )}
+      <ScrollView>{this.renderInstructions(route)}</ScrollView>
+    ) : (
+      <View style={styles.noDataContainer}>
+        <Text style={styles.noData}>Where would you like to go, today?</Text>
       </View>
-    ) : null;
+    );
   }
 }
+
+const styles = StyleSheet.create({
+  noDataContainer: {
+    backgroundColor: '#eee',
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 30,
+  },
+  noData: {
+    fontSize: 22,
+    textAlign: 'center',
+    color: 'darkgray',
+  },
+});

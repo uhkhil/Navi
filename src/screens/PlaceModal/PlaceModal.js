@@ -1,5 +1,5 @@
 import React from 'react';
-import {ActivityIndicator} from 'react-native';
+import {ActivityIndicator, StyleSheet} from 'react-native';
 import {
   Container,
   Header,
@@ -15,8 +15,8 @@ import {
 } from 'native-base';
 import {debounce} from 'lodash';
 import {Constants} from '../../constants/Constants';
-
-const key = Constants.API_KEY;
+import {searchPlace, getLocation} from '../../services/Navigation';
+import {Colors} from '../../themes/Colors';
 
 export class PlaceModal extends React.Component {
   constructor() {
@@ -34,6 +34,7 @@ export class PlaceModal extends React.Component {
       ],
       results: [],
       loading: false,
+      current: {},
     };
     this.onChangeTextDelayed = debounce(
       (isFrom, searchText) => this.placeTyped(isFrom, searchText),
@@ -41,7 +42,7 @@ export class PlaceModal extends React.Component {
     );
   }
 
-  componentDidMount() {
+  async componentDidMount() {
     const place = this.props.navigation.getParam('place', {
       text: '',
       value: {},
@@ -50,6 +51,9 @@ export class PlaceModal extends React.Component {
     if (place && place.text) {
       this.placeTyped(place.text);
     }
+    const current = await getLocation();
+    console.log('TCL: PlaceModal -> componentDidMount -> current', current);
+    this.setState({current});
   }
 
   selectPlace = (text, value) => {
@@ -59,27 +63,11 @@ export class PlaceModal extends React.Component {
 
   placeTyped = async searchString => {
     this.setState({loading: true});
-    const results = await this.searchLocation(searchString);
+    const results = await searchPlace(searchString, this.state.current);
     this.setState({loading: false});
     this.setState({
       results: results ? results : [],
     });
-  };
-
-  searchLocation = searchString => {
-    console.log('TCL: PlaceModal -> key', key);
-    const promise = new Promise((resolve, reject) => {
-      const url = `https://api.tomtom.com/search/2/search/${searchString}.json?countrySet=IN&idxSet=POI&key=${key}`;
-      fetch(url)
-        .then(res => res.json())
-        .then(res => {
-          resolve(res.results);
-        })
-        .catch(err => {
-          reject([]);
-        });
-    });
-    return promise;
   };
 
   selectCurrentLocation = () => {
@@ -120,7 +108,7 @@ export class PlaceModal extends React.Component {
   render() {
     return (
       <Container>
-        <Header searchBar rounded>
+        <Header searchBar rounded style={styles.header}>
           <Item>
             <Icon name="ios-search" />
             <Input
@@ -130,7 +118,7 @@ export class PlaceModal extends React.Component {
               onChangeText={this.onChangeTextDelayed}
             />
             {this.state.loading ? (
-              <ActivityIndicator style={{marginRight: 10}} />
+              <ActivityIndicator style={styles.loader} />
             ) : null}
           </Item>
         </Header>
@@ -144,3 +132,13 @@ export class PlaceModal extends React.Component {
     );
   }
 }
+
+const styles = StyleSheet.create({
+  header: {
+    backgroundColor: Colors.secondary,
+  },
+  loader: {
+    marginRight: 10,
+    color: Colors.primary,
+  },
+});

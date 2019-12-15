@@ -1,19 +1,44 @@
 import axios from 'axios';
+import Geolocation from 'react-native-geolocation-service';
+import {
+  getDistanceFromLine,
+  orderByDistance,
+  getDistance,
+  computeDestinationPoint,
+  getGreatCircleBearing,
+} from 'geolib';
+
 import {Maneuvers} from '../constants/Maneuvers';
 import {Constants} from '../constants/Constants';
 
-const key = Constants.API_KEY;
+export const getLocation = () =>
+  new Promise((resolve, reject) => {
+    Geolocation.getCurrentPosition(position => {
+      resolve(position);
+    });
+  });
 
 export const calculateRoute = async (from, to) => {
   try {
     const result = await axios.get(
-      `https://api.tomtom.com/routing/1/calculateRoute/${from.lat},${
-        from.lon
-      }:${to.lat},${
-        to.lon
-      }/json?instructionsType=text&avoid=unpavedRoads&key=${key}`,
+      Constants.BASE_API +
+        Constants.APIS.CALCULATE_ROUTE +
+        from.lat +
+        ',' +
+        from.lon +
+        ':' +
+        to.lat +
+        ',' +
+        to.lon +
+        '/json',
+      {
+        params: {
+          instructionsType: 'text',
+          travelMode: 'motorcycle',
+          key: Constants.API_KEY,
+        },
+      },
     );
-    console.log('TCL: calculateRoute -> result', result);
     return {
       status: true,
       route: result.data.routes[0].guidance.instructions,
@@ -24,6 +49,30 @@ export const calculateRoute = async (from, to) => {
     return {
       status: false,
     };
+  }
+};
+
+export const searchPlace = async (searchString, current) => {
+  try {
+    const params = {
+      countrySet: 'IN',
+      idxSet: 'POI',
+      key: Constants.API_KEY,
+    };
+    if (current && current.coords) {
+      params.lat = current.coords.latitude;
+      params.lon = current.coords.longitude;
+    }
+    const result = await axios.get(
+      Constants.BASE_API + Constants.APIS.SEARCH + searchString + '.json',
+      {
+        params,
+      },
+    );
+    return result.data.results;
+  } catch (err) {
+    console.warn(err);
+    return [];
   }
 };
 
@@ -88,19 +137,18 @@ export function getRegionForCoordinates(points) {
   let minX, maxX, minY, maxY;
 
   // init first point
-  (point => {
-    minX = point.latitude;
-    maxX = point.latitude;
-    minY = point.longitude;
-    maxY = point.longitude;
-  })(points[0]);
+  const point = points[0].point;
+  minX = point.latitude;
+  maxX = point.latitude;
+  minY = point.longitude;
+  maxY = point.longitude;
 
   // calculate rect
-  points.map(point => {
-    minX = Math.min(minX, point.latitude);
-    maxX = Math.max(maxX, point.latitude);
-    minY = Math.min(minY, point.longitude);
-    maxY = Math.max(maxY, point.longitude);
+  points.forEach(point => {
+    minX = Math.min(minX, point.point.latitude);
+    maxX = Math.max(maxX, point.point.latitude);
+    minY = Math.min(minY, point.point.longitude);
+    maxY = Math.max(maxY, point.point.longitude);
   });
 
   const midX = (minX + maxX) / 2;
@@ -111,7 +159,82 @@ export function getRegionForCoordinates(points) {
   return {
     latitude: midX,
     longitude: midY,
-    latitudeDelta: deltaX * 1.4,
-    longitudeDelta: deltaY * 1.4,
+    latitudeDelta: deltaX * 1.6,
+    longitudeDelta: deltaY * 1.6,
   };
 }
+
+export const calculateNavigation = (position, route) => {
+  const mockLocation = false;
+  const mock = false;
+  const points = route.map(r => r.point);
+  // fetch current location
+  let current;
+  if (mockLocation) {
+    current = this.state.currentPoint;
+  } else {
+    current = position;
+  }
+
+  // locate the position on the polyline
+  // find the closest line
+
+  const nearestPoints = orderByDistance(current, points).slice(0, 5);
+
+  const nearestLines = [];
+  nearestPoints.forEach(point => {
+    const pointIndex = points.indexOf(point);
+    if (pointIndex !== 0) {
+      const prev = {
+        from: points[pointIndex - 1],
+        to: points[pointIndex],
+      };
+      nearestLines.push(prev);
+    }
+    if (pointIndex !== points.length - 1) {
+      const next = {
+        from: points[pointIndex],
+        to: points[pointIndex + 1],
+      };
+      nearestLines.push(next);
+    }
+  });
+
+  const nearestLine = nearestLines
+    .map(line => {
+      line.distance = getDistanceFromLine(current, line.from, line.to);
+      return line;
+    })
+    .filter(line => typeof line.distance === 'number')
+    .sort((a, b) => a.distance > b.distance)[0];
+
+  // calculate sides of the hypotenuse triangle
+  const hypotenuse = getDistance(current, nearestLine.to);
+  const alongLineDistance = Math.sqrt(
+    Math.pow(hypotenuse, 2) - Math.pow(nearestLine.distance, 2),
+  );
+
+  // find the point along the polyline
+  const bearing = getGreatCircleBearing(nearestLine.from, nearestLine.to);
+
+  const expectedPoint = computeDestinationPoint(
+    nearestLine.to,
+    -alongLineDistance,
+    bearing,
+  );
+
+  // create the next message`
+  let messageObj;
+  if (mock) {
+    messageObj = createMockNavigationData();
+  } else {
+    // find the respective instruction
+    const currentInstruction = route.find(r => r.point === nearestLine.to);
+    messageObj = createNavigationData(currentInstruction, alongLineDistance);
+  }
+  return {
+    messageObj,
+    nextLocation: nearestLine.to,
+    expectedLocation: expectedPoint,
+  };
+};

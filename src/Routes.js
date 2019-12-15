@@ -8,16 +8,16 @@ import {
   DrawerNavigatorItems,
 } from 'react-navigation-drawer';
 
-import {Navigate} from './screens/Navigate/Navigate';
 import {PlaceModal} from './screens/PlaceModal/PlaceModal';
 import {Setup} from './screens/Setup/Setup';
 import {Onboarding} from './screens/Onboarding/Onboarding';
 import {Dev} from './screens/Dev/Dev';
+import {Main} from './screens/Main/Main';
 
 const MainStack = createDrawerNavigator(
   {
     Navigate: {
-      screen: Navigate,
+      screen: Main,
       navigationOptions: {
         drawerLabel: () => <Text style={styles.label}>Navigate</Text>,
         drawerIcon: ({tintColor}) => (
@@ -45,19 +45,19 @@ const MainStack = createDrawerNavigator(
         ),
       },
     },
-    Dev: {
-      screen: Dev,
-      navigationOptions: {
-        drawerLabel: () => <Text style={styles.label}>Developer Settings</Text>,
-        drawerIcon: ({tintColor}) => (
-          <Icon
-            type="MaterialCommunityIcons"
-            style={[styles.icon, {color: tintColor}]}
-            name="settings"
-          />
-        ),
-      },
-    },
+    // Dev: {
+    //   screen: Dev,
+    //   navigationOptions: {
+    //     drawerLabel: () => <Text style={styles.label}>Developer Settings</Text>,
+    //     drawerIcon: ({tintColor}) => (
+    //       <Icon
+    //         type="MaterialCommunityIcons"
+    //         style={[styles.icon, {color: tintColor}]}
+    //         name="settings"
+    //       />
+    //     ),
+    //   },
+    // },
   },
   {
     initialRouteName: 'Navigate',
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
     fontSize: 25,
   },
   label: {
-    fontSize: 20,
+    fontSize: 18,
     margin: 15,
   },
   itemsContainer: {marginTop: 0},
