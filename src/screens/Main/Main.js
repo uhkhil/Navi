@@ -125,14 +125,15 @@ export class Main extends React.Component {
   startForegroundService = async (
     title = 'You are navigating!',
     message = 'Please do not close this notification',
+    icon = 'ic-launcher',
   ) => {
     const notificationConfig = {
       channelId: 'navigation',
       id: 3456,
       title: title,
       text: message,
-      icon: 'ic_launcher',
-      iconLarge: 'ic_launcher',
+      icon,
+      iconLarge: icon,
       color: Colors.secondary,
       colorized: true,
     };
@@ -162,6 +163,7 @@ export class Main extends React.Component {
         this.startForegroundService(
           messageObj.display + ' in ' + messageObj.distance,
           messageObj.message,
+          messageObj.icon,
         );
         this.setState({
           messageObj,
