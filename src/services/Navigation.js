@@ -122,9 +122,11 @@ const humanifyDistance = given => {
 };
 
 export const createNavigationData = (instruction, distance) => {
+  const maneuverDetails = Maneuvers.find(m => m.value === instruction.maneuver);
   const messageObj = {
     maneuver: instruction.maneuver,
-    display: Maneuvers.find(m => m.value === instruction.maneuver).display,
+    display: maneuverDetails.display,
+    icon: maneuverDetails.icon,
     message: instruction.message,
     distance: humanifyDistance(distance),
     turnAngle: instruction.turnAngleInDecimalDegrees,
