@@ -16,6 +16,7 @@ import {Dev} from './screens/Dev/Dev';
 import {Main} from './screens/Main/Main';
 import {Landing} from './screens/Landing/Landing';
 import {Colors} from './themes/Colors';
+import {SetupInitial} from './screens/SetupInitial/SetupInitial';
 
 const MainStack = createDrawerNavigator(
   {
@@ -91,6 +92,9 @@ const RootStack = createStackNavigator(
     },
     Onboarding: {
       screen: Onboarding,
+    },
+    SetupInitial: {
+      screen: SetupInitial,
     },
     Landing: {
       screen: Landing,
