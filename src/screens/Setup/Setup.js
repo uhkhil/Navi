@@ -23,6 +23,7 @@ import {
 } from 'native-base';
 import {setup} from '../../services/Device';
 import {Colors} from '../../themes/Colors';
+import {DeviceSetupCard} from '../../components/Navigation/DeviceSetupCard/DeviceSetupCard';
 
 export class Setup extends React.Component {
   state = {
@@ -72,6 +73,7 @@ export class Setup extends React.Component {
               </Body>
             </ListItem>
           </List>
+          <DeviceSetupCard />
           <Card style={styles.card}>
             <CardItem header>
               <Text style={styles.title}>Reset Wifi</Text>

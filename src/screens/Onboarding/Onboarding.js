@@ -9,7 +9,7 @@ import {Colors} from '../../themes/Colors';
 export class Onboarding extends React.Component {
   done = () => {
     AsyncStorage.setItem('onboarding', 'done');
-    this.props.navigation.navigate('Navigate');
+    this.props.navigation.navigate('SetupInitial');
   };
 
   render() {

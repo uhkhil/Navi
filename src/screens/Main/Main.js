@@ -147,6 +147,10 @@ export class Main extends React.Component {
   toggleNavigation = async (value = !this.state.isNavigating) => {
     this.setState({isNavigating: value});
     if (value) {
+      Alert.alert(
+        'Quick reminder!',
+        'Please make sure your NaviCast device is connected via WiFi and your data is switched off.',
+      );
       const channelConfig = {
         id: 'navigation',
         name: 'Navigation',
