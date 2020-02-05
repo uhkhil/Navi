@@ -9,11 +9,8 @@ export class Landing extends React.Component {
 
   checkNextStep = async () => {
     const onboarding = await AsyncStorage.getItem('onboarding');
-    const setup = await AsyncStorage.getItem('setup');
     if (onboarding !== 'done') {
       this.props.navigation.navigate('Onboarding');
-    } else if (setup !== 'done') {
-      this.props.navigation.navigate('SetupInitial');
     } else {
       this.props.navigation.navigate('Main');
     }
