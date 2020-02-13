@@ -1,6 +1,18 @@
 import React from 'react';
 import {Alert, StyleSheet} from 'react-native';
-import {Tabs, Tab, TabHeading, Text, Spinner, View} from 'native-base';
+import {
+  Tabs,
+  Tab,
+  TabHeading,
+  Text,
+  Spinner,
+  View,
+  Content,
+  ListItem,
+  Left,
+  Right,
+  Radio,
+} from 'native-base';
 import Geolocation from 'react-native-geolocation-service';
 import BackgroundTimer from 'react-native-background-timer';
 
@@ -16,6 +28,7 @@ import {Navigation} from '../../components/Navigation/Navigation';
 import {Colors} from '../../themes/Colors';
 import VIForegroundService from '@voximplant/react-native-foreground-service';
 import {sendData} from '../../services/Device';
+import {Logger} from '../../services/Logger';
 
 export class Main extends React.Component {
   state = {
@@ -37,6 +50,7 @@ export class Main extends React.Component {
     expectedLocation: null,
     currentLocation: {latitude: 0, longitude: 0},
     nextLocation: null,
+    simulating: false,
   };
 
   constructor() {
@@ -49,9 +63,14 @@ export class Main extends React.Component {
     if (access) {
       const location = await getLocation();
       this.setState({currentLocation: location.coords});
+      // Logger.mockLocation(coords => {
+      //   console.log('TCL: Main -> init -> coords', coords);
+      //   this.setState({currentLocation: coords}, () => {});
+      // });
       Geolocation.watchPosition(
         position => {
           this.setState({currentLocation: position.coords}, () => {});
+          Logger.watchLocation(position.coords);
         },
         null,
         {
@@ -177,11 +196,31 @@ export class Main extends React.Component {
         sendData(messageObj);
       }, 1000);
     } else {
+      Logger.stopWatchingLocation(this.state.source, this.state.destination);
       VIForegroundService.stopService();
       if (this.interval) {
         BackgroundTimer.clearInterval(this.interval);
       }
     }
+  };
+
+  renderDevTab = () => {
+    return (
+      <Content>
+        <ListItem selected={false}>
+          <Left>
+            <Text>Simulating</Text>
+          </Left>
+          <Right>
+            <Radio
+              color={'#f0ad4e'}
+              selectedColor={'#5cb85c'}
+              selected={this.state.simulating}
+            />
+          </Right>
+        </ListItem>
+      </Content>
+    );
   };
 
   render() {
@@ -237,6 +276,14 @@ export class Main extends React.Component {
               </TabHeading>
             }>
             <Navigation route={route} isNavigating={isNavigating} />
+          </Tab>
+          <Tab
+            heading={
+              <TabHeading style={styles.tabHeader}>
+                <Text>Dev</Text>
+              </TabHeading>
+            }>
+            {this.renderDevTab()}
           </Tab>
         </Tabs>
       </View>

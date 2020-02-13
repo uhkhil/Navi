@@ -3,11 +3,7 @@ import {StyleSheet} from 'react-native';
 import {Icon, Text, View} from 'native-base';
 import {createAppContainer} from 'react-navigation';
 import {createStackNavigator} from 'react-navigation-stack';
-import {
-  createDrawerNavigator,
-  DrawerNavigatorItems,
-  DrawerItems,
-} from 'react-navigation-drawer';
+import {createDrawerNavigator, DrawerItems} from 'react-navigation-drawer';
 
 import {PlaceModal} from './screens/PlaceModal/PlaceModal';
 import {Setup} from './screens/Setup/Setup';
@@ -16,7 +12,6 @@ import {Dev} from './screens/Dev/Dev';
 import {Main} from './screens/Main/Main';
 import {Landing} from './screens/Landing/Landing';
 import {Colors} from './themes/Colors';
-import {SetupInitial} from './screens/SetupInitial/SetupInitial';
 
 const MainStack = createDrawerNavigator(
   {
@@ -92,9 +87,6 @@ const RootStack = createStackNavigator(
     },
     Onboarding: {
       screen: Onboarding,
-    },
-    SetupInitial: {
-      screen: SetupInitial,
     },
     Landing: {
       screen: Landing,
