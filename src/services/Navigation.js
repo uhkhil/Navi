@@ -205,10 +205,15 @@ export const calculateNavigation = (position, route) => {
   const nearestLine = nearestLines
     .map(line => {
       line.distance = getDistanceFromLine(current, line.from, line.to);
+      console.log('TCL: calculateNavigation -> current', current);
+      line.heading = getGreatCircleBearing(line.from, line.to);
+      console.log('TCL: calculateNavigation -> line.heading', line.heading);
+      line.farthestScore =
+        line.distance * 1 + Math.abs(current.heading - line.heading) * 2;
       return line;
     })
     .filter(line => typeof line.distance === 'number')
-    .sort((a, b) => a.distance > b.distance)[0];
+    .sort((a, b) => a.farthestScore > b.farthestScore)[0];
 
   // calculate sides of the hypotenuse triangle
   const hypotenuse = getDistance(current, nearestLine.to);

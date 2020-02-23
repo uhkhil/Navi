@@ -277,14 +277,6 @@ export class Main extends React.Component {
             }>
             <Navigation route={route} isNavigating={isNavigating} />
           </Tab>
-          <Tab
-            heading={
-              <TabHeading style={styles.tabHeader}>
-                <Text>Dev</Text>
-              </TabHeading>
-            }>
-            {this.renderDevTab()}
-          </Tab>
         </Tabs>
       </View>
     );
