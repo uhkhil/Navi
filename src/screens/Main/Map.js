@@ -3,7 +3,7 @@ import {StyleSheet} from 'react-native';
 import {View, Icon, Button, Text} from 'native-base';
 import MapView, {Polyline, Marker} from 'react-native-maps';
 import {Colors} from '../../themes/Colors';
-import {getRegionForCoordinates} from '../../services/Navigation';
+import {NavigationService} from '../../services/NavigationService';
 
 export class Map extends React.Component {
   state = {
@@ -22,7 +22,10 @@ export class Map extends React.Component {
     const {route, currentLocation} = this.props;
     const {touched} = this.state;
     if (route !== prevProps.route) {
-      this.mapRef.animateToRegion(getRegionForCoordinates(route), 1000);
+      this.mapRef.animateToRegion(
+        NavigationService.getRegionForCoordinates(route),
+        1000,
+      );
     }
     if (currentLocation !== prevProps.currentLocation && !touched) {
       this.mapRef.animateToRegion(
@@ -114,7 +117,7 @@ export class Map extends React.Component {
               />
             </Marker>
           ) : null}
-          {/* {nextLocation ? (
+          {nextLocation ? (
             <Marker
               coordinate={nextLocation}
               title="Next stop"
@@ -127,7 +130,7 @@ export class Map extends React.Component {
               title="Expected"
               pinColor="blue"
             />
-          ) : null} */}
+          ) : null}
         </MapView>
         <View style={styles.mapButtons}>
           {touched ? (

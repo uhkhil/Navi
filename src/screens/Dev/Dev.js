@@ -1,12 +1,12 @@
 import React from 'react';
 import {Container, Text, List, ListItem, Button, View} from 'native-base';
-import {sendData} from '../../services/Device';
-import {createMockNavigationData} from '../../services/Navigation';
+import {DeviceService} from '../../services/DeviceService';
+import {NavigationService} from '../../services/NavigationService';
 
 export class Dev extends React.Component {
   sendTestData = () => {
-    const obj = createMockNavigationData();
-    sendData(obj)
+    const obj = NavigationService.createMockNavigationData();
+    DeviceService.sendData(obj)
       .then(res => {
         this.setState({testResult: res});
       })

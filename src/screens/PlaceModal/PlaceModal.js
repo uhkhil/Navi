@@ -14,8 +14,7 @@ import {
   Body,
 } from 'native-base';
 import {debounce} from 'lodash';
-import {Constants} from '../../constants/Constants';
-import {searchPlace, getLocation} from '../../services/Navigation';
+import {NavigationService} from '../../services/NavigationService';
 import {Colors} from '../../themes/Colors';
 
 export class PlaceModal extends React.Component {
@@ -51,8 +50,7 @@ export class PlaceModal extends React.Component {
     if (place && place.text) {
       this.placeTyped(place.text);
     }
-    const current = await getLocation();
-    console.log('TCL: PlaceModal -> componentDidMount -> current', current);
+    const current = await NavigationService.getLocation();
     this.setState({current});
   }
 
@@ -63,7 +61,10 @@ export class PlaceModal extends React.Component {
 
   placeTyped = async searchString => {
     this.setState({loading: true});
-    const results = await searchPlace(searchString, this.state.current);
+    const results = await NavigationService.searchPlace(
+      searchString,
+      this.state.current,
+    );
     this.setState({loading: false});
     this.setState({
       results: results ? results : [],
