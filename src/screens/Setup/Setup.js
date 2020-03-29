@@ -21,7 +21,7 @@ import {
   Card,
   CardItem,
 } from 'native-base';
-import {setup} from '../../services/Device';
+import {DeviceService} from '../../services/DeviceService';
 import {Colors} from '../../themes/Colors';
 import {DeviceSetupCard} from '../../components/Navigation/DeviceSetupCard/DeviceSetupCard';
 
@@ -40,7 +40,7 @@ export class Setup extends React.Component {
       return;
     }
     this.setState({loading: true});
-    const result = await setup(ssid, password);
+    const result = await DeviceService.setup(ssid, password);
     this.setState({loading: false, response: result});
     Alert.alert(
       'Done!',

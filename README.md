@@ -1,6 +1,6 @@
 # Navi
 
-The mobile client for [NaviCast](https://getnavicast.com/).
+React Native application for navigation.
 
 ### Tech
 - Built using [React Native](https://facebook.github.io/react-native/)

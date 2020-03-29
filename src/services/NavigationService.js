@@ -11,14 +11,37 @@ import {
 import {Maneuvers} from '../constants/Maneuvers';
 import {Constants} from '../constants/Constants';
 
-export const getLocation = () =>
+const getLocation = () =>
   new Promise((resolve, reject) => {
     Geolocation.getCurrentPosition(position => {
       resolve(position);
     });
   });
 
-export const calculateRoute = async (from, to) => {
+const watchLocation = callback => {
+  try {
+    Geolocation.watchPosition(
+      position => {
+        callback(position);
+      },
+      null,
+      {
+        enableHighAccuracy: true,
+        interval: 1000,
+        fastestInterval: 100,
+        distanceFilter: 1,
+        showLocationDialog: true,
+        forceRequestLocation: true,
+        timeout: 1000,
+        maximumAge: 0,
+      },
+    );
+  } catch (error) {
+    console.warn(error);
+  }
+};
+
+const calculateRoute = async (from, to) => {
   try {
     const result = await axios.get(
       Constants.BASE_API +
@@ -45,14 +68,14 @@ export const calculateRoute = async (from, to) => {
       legs: result.data.routes[0].legs,
     };
   } catch (err) {
-    console.log(err);
+    console.warn(err);
     return {
       status: false,
     };
   }
 };
 
-export const searchPlace = async (searchString, current) => {
+const searchPlace = async (searchString, current) => {
   try {
     const params = {
       countrySet: 'IN',
@@ -76,7 +99,7 @@ export const searchPlace = async (searchString, current) => {
   }
 };
 
-export const createMockNavigationData = () => {
+const createMockNavigationData = () => {
   const maneuvers = Maneuvers;
   const messages = [
     'Leave from Ramganesh Gadkari Road',
@@ -113,7 +136,7 @@ export const createMockNavigationData = () => {
   return message;
 };
 
-const humanifyDistance = given => {
+const _humanifyDistance = given => {
   let distance = parseInt(given, 10);
   if (distance > 1000) {
     return (distance / 1000).toFixed(1) + ' km';
@@ -121,20 +144,20 @@ const humanifyDistance = given => {
   return distance + ' m';
 };
 
-export const createNavigationData = (instruction, distance) => {
+const createNavigationData = (instruction, distance) => {
   const maneuverDetails = Maneuvers.find(m => m.value === instruction.maneuver);
   const messageObj = {
     maneuver: instruction.maneuver,
     display: maneuverDetails.display,
     icon: maneuverDetails.icon,
     message: instruction.message,
-    distance: humanifyDistance(distance),
+    distance: _humanifyDistance(distance),
     turnAngle: instruction.turnAngleInDecimalDegrees,
   };
   return messageObj;
 };
 
-export function getRegionForCoordinates(points) {
+function getRegionForCoordinates(points) {
   // points should be an array of { latitude: X, longitude: Y }
   let minX, maxX, minY, maxY;
 
@@ -166,7 +189,7 @@ export function getRegionForCoordinates(points) {
   };
 }
 
-export const calculateNavigation = (position, route) => {
+const calculateNavigation = (position, route) => {
   const mockLocation = false;
   const mock = false;
   const points = route.map(r => r.point);
@@ -205,9 +228,7 @@ export const calculateNavigation = (position, route) => {
   const nearestLine = nearestLines
     .map(line => {
       line.distance = getDistanceFromLine(current, line.from, line.to);
-      console.log('TCL: calculateNavigation -> current', current);
       line.heading = getGreatCircleBearing(line.from, line.to);
-      console.log('TCL: calculateNavigation -> line.heading', line.heading);
       line.farthestScore =
         line.distance * 1 + Math.abs(current.heading - line.heading) * 2;
       return line;
@@ -244,4 +265,48 @@ export const calculateNavigation = (position, route) => {
     nextLocation: nearestLine.to,
     expectedLocation: expectedPoint,
   };
+};
+
+// Mocking related things
+
+let mockRoute = [];
+let mockLooper;
+
+const setMockRoute = route => {
+  mockRoute = route;
+};
+
+const mockNavigate = callback => {
+  let startTime = new Date().getTime();
+  let index = 0;
+  mockLooper = setInterval(function() {
+    const now = new Date().getTime();
+    if (mockRoute[index].timestamp - (now - startTime) < 1000) {
+      callback(mockRoute[index].coords);
+      index++;
+      if (index >= mockRoute.length) {
+        clearInterval(mockLooper);
+      }
+    }
+  }, 1000);
+};
+
+const stopMockNavigation = () => {
+  if (mockLooper) {
+    clearInterval(mockLooper);
+  }
+};
+
+export const NavigationService = {
+  getLocation,
+  watchLocation,
+  calculateRoute,
+  searchPlace,
+  createMockNavigationData,
+  createNavigationData,
+  getRegionForCoordinates,
+  calculateNavigation,
+  setMockRoute,
+  mockNavigate,
+  stopMockNavigation,
 };
