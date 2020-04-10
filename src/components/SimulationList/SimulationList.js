@@ -25,12 +25,18 @@ export class SimulationList extends React.Component {
       if (!status) {
         throw new Error('Failed to fetch simulations.');
       }
-      // TODO: Update this API is fixed.
-      const filtered = data.filter(
-        sim => sim.object && sim.object.route && sim.object.route.length,
-      );
       this.setState({
-        simulations: filtered,
+        simulations: data
+          // TODO: Fix the API
+          .filter(d => !d.label)
+          .map(d => {
+            console.log('SimulationList -> fetchSimulations -> d', d);
+            d.source.coords.lat = d.source.coords.latitude;
+            d.source.coords.lon = d.source.coords.longitude;
+            d.destination.coords.lat = d.destination.coords.latitude;
+            d.destination.coords.lon = d.destination.coords.longitude;
+            return d;
+          }),
       });
     } catch (error) {
       console.warn(error);
@@ -44,9 +50,11 @@ export class SimulationList extends React.Component {
   }
 
   getLabel(sim) {
-    const from = sim.object.source;
-    const to = sim.object.destination;
-    return `${from.name} to ${to.name}`;
+    const from = sim.source;
+    const to = sim.destination;
+    return `${from.name ? from.name : 'Unknown location'} to ${
+      to.name ? to.name : 'Unknown location'
+    }`;
   }
 
   renderItem(item) {
@@ -56,15 +64,14 @@ export class SimulationList extends React.Component {
         key={item._id}
         onPress={() =>
           selectSimulation({
-            // TODO: Update this when API format is fixed.
-            source: item.object.source,
-            destination: item.object.destination,
-            route: item.object.route,
+            source: item.source,
+            destination: item.destination,
+            route: item.route,
           })
         }>
         <Body>
           <Text>{this.getLabel(item)}</Text>
-          <Text note>{item.object.route.length} location changes</Text>
+          <Text note>{item.route.length} location changes</Text>
           <Text note>{this.getHumanDate(item.createdAt)}</Text>
         </Body>
       </ListItem>

@@ -190,6 +190,9 @@ function getRegionForCoordinates(points) {
 }
 
 const calculateNavigation = (position, route) => {
+  // debugger;
+  console.log('calculation....');
+
   const mockLocation = false;
   const mock = false;
   const points = route.map(r => r.point);
@@ -205,6 +208,7 @@ const calculateNavigation = (position, route) => {
   // find the closest line
 
   const nearestPoints = orderByDistance(current, points).slice(0, 5);
+  console.log('calculateNavigation -> nearestPoints', nearestPoints);
 
   const nearestLines = [];
   nearestPoints.forEach(point => {
@@ -224,17 +228,40 @@ const calculateNavigation = (position, route) => {
       nearestLines.push(next);
     }
   });
+  console.log('calculateNavigation -> nearestLines', nearestLines);
 
-  const nearestLine = nearestLines
+  const sortedLines = nearestLines
     .map(line => {
       line.distance = getDistanceFromLine(current, line.from, line.to);
-      line.heading = getGreatCircleBearing(line.from, line.to);
-      line.farthestScore =
-        line.distance * 1 + Math.abs(current.heading - line.heading) * 2;
+      if (isNaN(line.distance)) {
+        line.distance = 0;
+      }
+      console.log('calculateNavigation -> current', current);
+      line.heading = Math.abs(
+        getGreatCircleBearing(line.from, line.to) - current.heading,
+      );
+      console.log('calculateNavigation -> line.heading', line.heading);
+      line.farthestScore = line.distance * 1 + line.heading * 1;
+      console.log('calculateNavigation -> line.distance', line.distance);
+      console.log('calculateNavigation -> line.heading', line.heading);
       return line;
     })
-    .filter(line => typeof line.distance === 'number')
-    .sort((a, b) => a.farthestScore > b.farthestScore)[0];
+    .filter(
+      line =>
+        typeof line.farthestScore === 'number' && !isNaN(line.farthestScore),
+    )
+    .sort((a, b) => a.farthestScore - b.farthestScore);
+  console.log(
+    'calculateNavigation -> sortedLines',
+    JSON.stringify(sortedLines, null, 2),
+  );
+
+  const debugLines = sortedLines.map((l, idx) => {
+    l.rank = idx + 1;
+    return l;
+  });
+
+  const nearestLine = sortedLines[0];
 
   // calculate sides of the hypotenuse triangle
   const hypotenuse = getDistance(current, nearestLine.to);
@@ -264,6 +291,8 @@ const calculateNavigation = (position, route) => {
     messageObj,
     nextLocation: nearestLine.to,
     expectedLocation: expectedPoint,
+    debugPoints: [],
+    debugLines,
   };
 };
 

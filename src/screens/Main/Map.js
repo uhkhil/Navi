@@ -65,6 +65,9 @@ export class Map extends React.Component {
       currentLocation,
       expectedLocation,
       nextLocation,
+      onDrag,
+      debugPoints,
+      debugLines,
     } = this.props;
     const {region, touched} = this.state;
     return (
@@ -85,6 +88,14 @@ export class Map extends React.Component {
               lineCap="round"
             />
           ) : null}
+          {/* {debugLines.map(line => (
+            <Polyline
+              key={line.rank}
+              strokeColor="black"
+              strokeWidth={10 - line.rank}
+              coordinates={[line.from, line.to]}
+            />
+          ))} */}
           {routeFetched &&
           destination.coords &&
           destination.coords.latitude !== undefined ? (
@@ -107,8 +118,8 @@ export class Map extends React.Component {
             <Marker
               coordinate={currentLocation}
               title="Actual"
-              //   draggable={mockLocation}
-              //   onDragEnd={this.onDrag}
+              draggable={true}
+              onDragEnd={onDrag}
               pinColor="lightblue">
               <Icon
                 type="MaterialCommunityIcons"

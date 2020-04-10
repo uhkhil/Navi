@@ -37,6 +37,8 @@ export class Main extends React.Component {
     currentLocation: {latitude: 0, longitude: 0},
     nextLocation: null,
     simulating: false,
+    debugPoints: [],
+    debugLines: [],
   };
 
   constructor() {
@@ -142,7 +144,13 @@ export class Main extends React.Component {
           currentLocation,
           route,
         );
-        const {messageObj, nextLocation, expectedLocation} = navigation;
+        const {
+          messageObj,
+          nextLocation,
+          expectedLocation,
+          debugPoints,
+          debugLines,
+        } = navigation;
         NotificationService.sendNotification(
           messageObj.display + ' in ' + messageObj.distance,
           messageObj.message,
@@ -152,6 +160,8 @@ export class Main extends React.Component {
           messageObj,
           nextLocation,
           expectedLocation: {...expectedLocation},
+          debugPoints,
+          debugLines,
         });
         DeviceService.sendData(messageObj);
       }, 1000);
@@ -198,6 +208,11 @@ export class Main extends React.Component {
     );
   };
 
+  onDrag = event => {
+    console.log('Main -> onDrag -> event', event);
+    this.setState({currentLocation: event.nativeEvent.coordinate});
+  };
+
   render() {
     const {
       source,
@@ -210,6 +225,8 @@ export class Main extends React.Component {
       currentLocation,
       nextLocation,
       expectedLocation,
+      debugPoints,
+      debugLines,
     } = this.state;
     const {navigation} = this.props;
     return (
@@ -245,12 +262,17 @@ export class Main extends React.Component {
               toggleNavigation={this.toggleNavigation}
               isNavigating={isNavigating}
               changeCurrentLocation={this.changeCurrentLocation}
+              onDrag={this.onDrag}
+              debugPoints={debugPoints}
+              debugLines={debugLines}
             />
           </Tab>
           <Tab
             heading={
               <TabHeading style={styles.tabHeader}>
-                <Spinner size="small" animating={routeFetching} />
+                {routeFetching ? (
+                  <Spinner size="small" animating={routeFetching} />
+                ) : null}
                 <Text>Navigation</Text>
               </TabHeading>
             }>
@@ -277,5 +299,6 @@ const styles = StyleSheet.create({
   },
   tabHeader: {
     backgroundColor: Colors.secondary,
+    marginTop: -15,
   },
 });
