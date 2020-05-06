@@ -1141,8 +1141,8 @@
     semver "5.5.0"
 
 "@voximplant/react-native-foreground-service@git+https://git@github.com/uhkhil/react-native-foreground-service.git":
-  version "2.0.0"
-  resolved "git+https://git@github.com/uhkhil/react-native-foreground-service.git#bb8c9a8874c9096b1a5bb64ef8de8379fc883d78"
+  version "2.0.1"
+  resolved "git+https://git@github.com/uhkhil/react-native-foreground-service.git#59fc42cd85ef062ee47647355fccc2352f2403d4"
 
 abab@^2.0.0:
   version "2.0.2"

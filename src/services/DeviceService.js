@@ -39,7 +39,31 @@ const setup = async (ssid, key) => {
   }
 };
 
+const upateFirmware = async data => {
+  try {
+    const options = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    };
+    options.body = new FormData();
+    for (let key in data) {
+      options.body.append(key, data[key]);
+    }
+
+    const result = await fetch(
+      Constants.DEVICE_BASE + Constants.DEVICE_API.UPDATE,
+      options,
+    );
+    return {status: true};
+  } catch (err) {
+    return {status: false, err, message: err};
+  }
+};
+
 export const DeviceService = {
   sendData,
   setup,
+  upateFirmware,
 };
