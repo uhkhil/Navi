@@ -326,6 +326,31 @@ const stopMockNavigation = () => {
   }
 };
 
+const locationStack = [];
+
+/**
+ *
+ * @param {Object} coord
+ * @param {Boolean} optimize
+ * This function will consider previous results and sensor accuracy to predict the current location.
+ */
+const normalizeLocation = (coord, optimize = false) => {
+  const history = 5;
+
+  if (!optimize) {
+    return coord;
+  }
+  if (!locationStack.length) {
+    locationStack.push(coord);
+    return coord;
+  }
+  if (locationStack.length >= history) {
+    locationStack.shift();
+    locationStack.push(coord);
+  }
+  return locationStack[locationStack.length - 1];
+};
+
 export const NavigationService = {
   getLocation,
   watchLocation,
@@ -338,4 +363,5 @@ export const NavigationService = {
   setMockRoute,
   mockNavigate,
   stopMockNavigation,
+  normalizeLocation,
 };

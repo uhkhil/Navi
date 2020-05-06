@@ -3,6 +3,7 @@ export const Constants = {
   DEVICE_API: {
     SEND: '/send',
     SETUP: '/setup',
+    UPDATE: '/upload',
   },
   BASE_API: 'https://api.tomtom.com',
   APIS: {
