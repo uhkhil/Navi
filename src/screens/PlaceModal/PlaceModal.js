@@ -54,8 +54,14 @@ export class PlaceModal extends React.Component {
     this.setState({current});
   }
 
-  selectPlace = (text, value) => {
-    this.props.navigation.state.params.action(text, value);
+  selectPlace = async (text, placeId) => {
+    const place = await NavigationService.fetchPlace(placeId);
+    const location = place.geometry.location;
+    const coords = {
+      lat: location.lat,
+      lon: location.lng,
+    };
+    this.props.navigation.state.params.action(text, coords);
     this.props.navigation.pop();
   };
 
@@ -79,11 +85,11 @@ export class PlaceModal extends React.Component {
     return list.map((item, idx) => (
       <ListItem
         key={idx}
-        onPress={() => this.selectPlace(item.poi.name, item.position)}>
+        onPress={() => this.selectPlace(item.description, item.place_id)}>
         <Body>
-          <Text>{item.poi.name}</Text>
+          <Text>{item.structured_formatting.main_text}</Text>
           <Text note numberOfLines={1}>
-            {item.address.freeformAddress}
+            {item.structured_formatting.secondary_text}
           </Text>
         </Body>
         <Right>

@@ -78,21 +78,27 @@ const calculateRoute = async (from, to) => {
 const searchPlace = async (searchString, current) => {
   try {
     const params = {
-      countrySet: 'IN',
-      idxSet: 'POI',
-      key: Constants.API_KEY,
+      input: searchString,
+      key: Constants.GOOGLE_API_KEY,
     };
-    if (current && current.coords) {
-      params.lat = current.coords.latitude;
-      params.lon = current.coords.longitude;
-    }
-    const result = await axios.get(
-      Constants.BASE_API + Constants.APIS.SEARCH + searchString + '.json',
-      {
-        params,
-      },
-    );
-    return result.data.results;
+    const result = await axios.get(Constants.GOOGLE_AUTOCOMPLETE_API, {params});
+    console.log('searchPlace -> result', result);
+    return result.data.predictions;
+  } catch (err) {
+    console.warn(err);
+    return [];
+  }
+};
+
+const fetchPlace = async placeId => {
+  try {
+    const params = {
+      place_id: placeId,
+      key: Constants.GOOGLE_API_KEY,
+    };
+    const result = await axios.get(Constants.GOOGLE_PLACES_API, {params});
+    console.log('searchPlace -> result', result);
+    return result.data.result;
   } catch (err) {
     console.warn(err);
     return [];
@@ -356,6 +362,7 @@ export const NavigationService = {
   watchLocation,
   calculateRoute,
   searchPlace,
+  fetchPlace,
   createMockNavigationData,
   createNavigationData,
   getRegionForCoordinates,
